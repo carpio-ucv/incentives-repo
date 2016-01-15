@@ -71,3 +71,5 @@ format(ps, scientific = FALSE)
 
 
 g<- data_clean %>% group_by(r_type)  %>% summarise_each(funs(mean))
+
+### PROBANDO 1 2 3
