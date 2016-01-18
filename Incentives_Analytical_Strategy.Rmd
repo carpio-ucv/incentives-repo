@@ -64,13 +64,15 @@ final_df<-data_clean %>% mutate(
 ```
 
 ### Choices summary (Dependent variabl)
-```{r}
+```{r, cache=TRUE}
 tot_choices<-cbind(count(final_df, c(vd_0f)), count(final_df, c(vd_1f)),count(final_df, c(vd_2f)))
+tot_choices
 ```
 
+#SIZE OF THE REWARD (£2 vs 5£)
 
 ### FUNCTION calculating t.tests comparing AMOUNT size
-```{r , echo=FALSE, eval=TRUE, include=TRUE}
+```{r , echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 t<-lapply(final_df[,c(2:12,31:33)], 
           function(x) t.test(x ~ final_df[,29], var.equal = TRUE))
@@ -81,7 +83,7 @@ format(ps, scientific = FALSE)
 ```
 
 ### FUNCTION calculating Mann-Whitney (Non-Parametric) comparing AMOUNT size
-```{r , echo=FALSE, eval=TRUE, include=TRUE}
+```{r , echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 t<-lapply(final_df[,c(2:12,31:33)], 
           function(x) wilcox.test(x ~ final_df[,29], var.equal = TRUE))
@@ -91,9 +93,28 @@ format(ps, scientific = FALSE)
 
 ```
 
+### Scheme rankings and SIZE of the reward.
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount"))
+
+ggplot(g2data, aes(x=value, fill=r_amount)) +
+        geom_bar(stat_count="identity",position="dodge",binwidth=1)+
+        facet_grid(~variable)+
+        scale_x_discrete(limit=c(1,2,3))+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```
+
+#REWARD TYPE (Product vs Cash)
 
 ### FUNCTION calculating t.tests between REWARD TYPE(prod./cash)
-```{r, echo=FALSE, eval=TRUE, include=TRUE}
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 t<-lapply(final_df[,c(2:12,31:33)], 
           function(x) t.test(x ~ final_df[,30], var.equal = TRUE))
 
@@ -102,7 +123,7 @@ format(ps, scientific = FALSE)
 ```
 
 ### FUNCTION calculating Mann-Whitney (Non-Parametric) comparing REWARD TYPE(prod./cash)
-```{r, echo=FALSE, eval=TRUE, include=TRUE}
+```{r, echo=FALSE, eval=TRUE, include=TRUE ,cache=TRUE}
 t<-lapply(final_df[,c(2:12,31:33)], 
           function(x) wilcox.test(x ~ final_df[,30], var.equal = TRUE))
 
@@ -111,48 +132,63 @@ format(ps, scientific = FALSE)
 ```
 
 ## Scheme rankings and TYPE of reward.
-Higher numbers represent expectations of negatives reactions whereas lower numbers imply positive expectations.  
-```{r, echo=FALSE, eval=TRUE, include=TRUE}
-g2data<-melt(final_df, measure.var= c("vd_0f","vd_2f","vd_1f"), 
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"), 
          id.var = c("r_type", "r_amount"))
 
 ggplot(g2data, aes(x=value, fill=r_type)) +
-        geom_bar(stat_count="identity",position="dodge",binwidth=0.5)+
+        geom_bar(stat_count="identity",position="dodge",binwidth=1)+
         facet_grid(~variable)+
-        #geom_errorbar(limits, position=dodge, width=0.25)+
-        scale_x_discrete(breaks=c(1,2,3))+
-        #coord_cartesian(ylim=c(0, 4.5))+
+        scale_x_discrete(limit=c(1,2,3))+
+        scale_fill_brewer(palette="Set1")+
         theme_bw()
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()
 
+```
+
+
 
 ## Expectations about friends reactions.
-Higher numbers represent expectations of negatives reactions whereas lower numbers imply positive expectations.  
-```{r, echo=FALSE, eval=TRUE, include=TRUE}
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
 gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
          id.var = c("r_type", "r_amount"))
 
 ggplot(gdata, aes(x=r_type, y=value, fill=variable))+
         geom_bar(stat="summary", fun.y="mean", position="dodge")+ 
-        #geom_errorbar(limits, position=dodge, width=0.25)+
         scale_y_continuous(limits =c(0,9), breaks=seq(0,9, 0.5))+
         coord_cartesian(ylim=c(0, 4.5))+
+        scale_fill_brewer(palette="Set1")+
         theme_bw()
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()
 ```
 
-## Fears of negatives evaluations, and typy of reward (amount/type).
+#Fears of Negative Evaluation Scale
 
-```{r, echo=FALSE, eval=TRUE, include=TRUE}
+
+### Answers distribution.
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+ggplot(final_df, aes(tot_neg_eval))+
+        geom_histogram()+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()
+
+```
+
+### Fears of negatives evaluations, and typy of reward (amount/type).
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 ggplot(final_df, aes(x=r_type, y=tot_neg_eval, fill=r_amount)) +
         geom_bar(stat="summary",fun.y="mean",position="dodge")+
         scale_y_continuous(limits =c(0,5), breaks=seq(0,9, 0.5))+
         coord_cartesian(ylim=c(0, 4.5))+
+        scale_fill_brewer(palette="Set1")+
         theme_bw()
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")

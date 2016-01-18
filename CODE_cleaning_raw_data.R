@@ -100,5 +100,8 @@ new_values<-function(x){
 
 new_values(df) #running function
 
+#reordering dependent variable
+tidy<- tidy %>% select(vd_0f, vd_1f, vd_2f, exp_x1_K:r_type) 
+
 # Create CSV File with clean data
 write.csv(tidy, file="clean_data.csv")
