@@ -63,7 +63,7 @@ final_df<-data_clean %>% mutate(
 
 ```
 
-### Choices summary (Dependent variabl)
+### Choices summary (Dependent variable)
 ```{r, cache=TRUE}
 tot_choices<-cbind(count(final_df, c(vd_0f)), count(final_df, c(vd_1f)),count(final_df, c(vd_2f)))
 tot_choices
@@ -131,18 +131,21 @@ ps<-data.frame(p.value = sapply(t, getElement, name = "p.value"))
 format(ps, scientific = FALSE) 
 ```
 
-## Scheme rankings and TYPE of reward.
+## Schemes ranking and TYPE of reward.
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"), 
          id.var = c("r_type", "r_amount"))
 
-ggplot(g2data, aes(x=value, fill=r_type)) +
+ggplot(g2data, aes(x=value, fill=r_type, y=(..count..)/sum(..count..)))+
         geom_bar(stat_count="identity",position="dodge",binwidth=1)+
         facet_grid(~variable)+
         scale_x_discrete(limit=c(1,2,3))+
+        #scale_y_continuous(labels = "percentage")+
         scale_fill_brewer(palette="Set1")+
         theme_bw()
+
+
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()
@@ -151,11 +154,13 @@ ggplot(g2data, aes(x=value, fill=r_type)) +
 
 
 
-## Expectations about friends reactions.
+# Expectations about friends reactions.
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
 
 gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
          id.var = c("r_type", "r_amount"))
+
 
 ggplot(gdata, aes(x=r_type, y=value, fill=variable))+
         geom_bar(stat="summary", fun.y="mean", position="dodge")+ 
@@ -168,16 +173,72 @@ ggplot(gdata, aes(x=r_type, y=value, fill=variable))+
 #dev.off()
 ```
 
+###Schemes Ranking, Type of rewards and expectation of frends reactions when sharing with 2 PEOPLE
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"), 
+         id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1", "tot_exp2"))
+
+ggplot(long_data, aes(x = factor(value), y = tot_exp2)) +
+  geom_boxplot(size = .75) +
+  geom_jitter(alpha = .5) +
+  facet_grid( r_type ~ r_amount, margins = TRUE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  labs(x="Schemes Ranking", y="Expectations-sharing with 2 friends")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+```
+
+###Schemes Ranking, Type of rewards and expectation of frends reactions when sharing with 1 Person
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"), 
+         id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1", "tot_exp2"))
+
+ggplot(long_data, aes(x = factor(value), y = tot_exp1)) +
+  geom_boxplot(size = .75) +
+  geom_jitter(alpha = .5) +
+  facet_grid( r_type ~ r_amount, margins = TRUE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
+  labs(x="Schemes Ranking", y="Expectations-sharing with 1 PERSON")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+```
+
+
 #Fears of Negative Evaluation Scale
 
 
 ### Answers distribution.
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
-ggplot(final_df, aes(tot_neg_eval))+
-        geom_histogram()+
+
+g3data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),id.var = c("tot_neg_eval"))
+
+r<-ggplot(g3data, aes(tot_neg_eval, fill=factor(value)))+
+        geom_histogram(colour="black")+
         scale_fill_brewer(palette="Set1")+
         theme_bw()
+r
+t<-ggplot(final_df, aes(tot_neg_eval, fill=r_type))+
+        geom_histogram(colour="black")+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()
+
+a<-ggplot(final_df, aes(tot_neg_eval, fill=r_amount))+
+        geom_histogram(colour="black")+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()
+par(mfrow=c(2,2))
+
+t
+a
+
+colour="black"
 
 ```
 
@@ -196,11 +257,21 @@ ggplot(final_df, aes(x=r_type, y=tot_neg_eval, fill=r_amount)) +
 ```
 
 
-```{r, echo=FALSE, eval=TRUE, include=TRUE}
+## Correlation Matrix
+
+###Pearson
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 yy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
         vd_0f, vd_2f, vd_1f)
-cor(yy)                             
+cor(yy, method="pearson")                             
 
-#dev.copy(jpeg,"figures/prueba2.jpeg")
-#dev.off()
 ```
+###Spearman
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+yy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
+        vd_0f, vd_2f, vd_1f)
+   
+cor(yy, method="spearman")                             
+```
+
+
