@@ -3,6 +3,5 @@ account: rpubs
 server: rpubs.com
 bundleId:
         https://api.rpubs.com/api/v1/document/143998/8e8939e285984e5cad1e166744d74a94
-url:
-        http://rpubs.com/publish/claim/143998/ddd6e894ece34db1b21ed7716aad9954
-when: 1453138337.70012
+url: http://rpubs.com/carpio_ucv/143998
+when: 1453178989.67262

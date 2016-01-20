@@ -17,6 +17,8 @@ library("tidyr")
 library("ggplot2")
 library("reshape2")
 library("Hmisc")
+library("leaps")
+library("MASS")# Ordinal logistic regression
 
 ## read raw_data
 data_clean_imp<-read.csv("clean_data.csv")
@@ -183,7 +185,7 @@ long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
 ggplot(long_data, aes(x = factor(value), y = tot_exp2)) +
   geom_boxplot(size = .75) +
   geom_jitter(alpha = .5) +
-  facet_grid( r_type ~ r_amount, margins = TRUE) +
+  facet_grid( r_type ~ r_amount, margins = FALSE) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
   labs(x="Schemes Ranking", y="Expectations-sharing with 2 friends")
 
@@ -201,7 +203,7 @@ long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
 ggplot(long_data, aes(x = factor(value), y = tot_exp1)) +
   geom_boxplot(size = .75) +
   geom_jitter(alpha = .5) +
-  facet_grid( r_type ~ r_amount, margins = TRUE) +
+  facet_grid( r_type ~ r_amount, margins = FALSE) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
   labs(x="Schemes Ranking", y="Expectations-sharing with 1 PERSON")
 
@@ -214,31 +216,24 @@ ggplot(long_data, aes(x = factor(value), y = tot_exp1)) +
 
 
 ### Answers distribution.
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE, error=FALSE, warning=FALSE}
 
 
-g3data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),id.var = c("tot_neg_eval"))
+g3data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+             id.var = c("tot_neg_eval"))
 
-r<-ggplot(g3data, aes(tot_neg_eval, fill=factor(value)))+
-        geom_histogram(colour="black")+
+
+ggplot(final_df, aes(tot_neg_eval, fill=r_type))+
+        geom_histogram(colour="black", binwidth=0.3)+
         scale_fill_brewer(palette="Set1")+
-        theme_bw()
-r
-t<-ggplot(final_df, aes(tot_neg_eval, fill=r_type))+
-        geom_histogram(colour="black")+
-        scale_fill_brewer(palette="Set1")+
+        facet_grid( ~r_amount, margins = FALSE) +
         theme_bw()
 
-a<-ggplot(final_df, aes(tot_neg_eval, fill=r_amount))+
-        geom_histogram(colour="black")+
+ggplot(final_df, aes(tot_neg_eval, fill=gender))+
+        geom_histogram(colour="black", binwidth=0.3)+
         scale_fill_brewer(palette="Set1")+
+        #facet_grid( ~r_amount, margins = FALSE) +
         theme_bw()
-par(mfrow=c(2,2))
-
-t
-a
-
-colour="black"
 
 ```
 
@@ -262,16 +257,54 @@ ggplot(final_df, aes(x=r_type, y=tot_neg_eval, fill=r_amount)) +
 ###Pearson
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 yy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
-        vd_0f, vd_2f, vd_1f)
-cor(yy, method="pearson")                             
+            vd_0f, vd_2f, vd_1f, gender, income, age, employ)
+
+yy[1:ncol(yy)] <- lapply(yy[1:ncol(yy)], function(x) as.numeric(x))
+
+rcorr(rxy, type="pearson")                           
 
 ```
 ###Spearman
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 yy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
-        vd_0f, vd_2f, vd_1f)
-   
-cor(yy, method="spearman")                             
+            vd_0f, vd_2f, vd_1f, gender, income, age, employ)
+
+yy[1:ncol(yy)] <- lapply(yy[1:ncol(yy)], function(x) as.numeric(x))
+
+rxy<-as.matrix(yy)   
+rcorr(rxy, type="spearman")                           
 ```
 
+# Regression Models
+```{r, echo=FALSE, comment=NA, warning=FALSE}
+
+fit_backward <- regsubsets(mpg ~.,data = mtcars, method = "backward", nbest=1, force.in =8) 
+
+fit_forward <- regsubsets(mpg ~.,data = mtcars, method = "forward", nbest=1, force.in =8) 
+
+
+fit_step <- regsubsets(mpg ~.,data = mtcars, method = "seqrep", nbest=1, force.in =8) 
+
+
+par(mfrow=c(1,2))
+plot_forward<-plot(fit_forward, main = "Forward Selection")
+plot_back<-plot(fit_backward, main = "Backward Selection")
+```
+
+##Model 1
+```{r}
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",           "tot_exp2"))
+
+long_data[[7]]=factor(long_data[[7]])
+
+m1 <- polr(value ~ r_type , data = long_data, Hess=TRUE)
+ctable <- coef(summary(m1))
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+ctable <- cbind(ctable, "p value" = p)
+ctable
+
+
+```
 
