@@ -7,3 +7,5 @@ lattice
 survival
 Formula
 Hmisc
+leaps
+MASS

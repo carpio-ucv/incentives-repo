@@ -5,20 +5,21 @@ date: "15 January 2016"
 output: html_document
 ---
 
-```{r,echo=TRUE, eval=TRUE, include=FALSE}
+```{r,echo=TRUE, eval=TRUE, include=FALSE, cache=FALSE}
 # Reading Clean File and setting relevant libraries.
 
 ## Change working directory
 setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives")
 
 ##Relevant libraries
+library("MASS")# Ordinal logistic regression
+library("Hmisc")
 library("dplyr")
 library("tidyr")
 library("ggplot2")
 library("reshape2")
-library("Hmisc")
 library("leaps")
-library("MASS")# Ordinal logistic regression
+
 
 ## read raw_data
 data_clean_imp<-read.csv("clean_data.csv")
@@ -66,25 +67,27 @@ final_df<-data_clean %>% mutate(
 ```
 
 ### Choices summary (Dependent variable)
-```{r, cache=TRUE}
+`r round(338/401, 2)*100`% of the participants preferred to keep the entire reward for themselves (different from previous experiments). 
+```{r, echo=FALSE, cache=TRUE}
 tot_choices<-cbind(count(final_df, c(vd_0f)), count(final_df, c(vd_1f)),count(final_df, c(vd_2f)))
 tot_choices
 ```
 
-#SIZE OF THE REWARD (£2 vs 5£)
+#1- SIZE OF THE REWARD (£2 vs 5£)
+There are significant differences in the expectations about friends reactions depending on the SIZE OF THE REWARD to be shared.
 
-### FUNCTION calculating t.tests comparing AMOUNT size
+### 1.1-FUNCTION calculating t.tests comparing AMOUNT size
 ```{r , echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 t<-lapply(final_df[,c(2:12,31:33)], 
           function(x) t.test(x ~ final_df[,29], var.equal = TRUE))
 
 ps<-data.frame(p.value = sapply(t, getElement, name = "p.value"))
-format(ps, scientific = FALSE) 
-
+format(ps, scientific = FALSE)
+           
 ```
 
-### FUNCTION calculating Mann-Whitney (Non-Parametric) comparing AMOUNT size
+### 1.2-FUNCTION calculating Mann-Whitney (Non-Parametric) comparing AMOUNT (size)
 ```{r , echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 t<-lapply(final_df[,c(2:12,31:33)], 
@@ -95,87 +98,36 @@ format(ps, scientific = FALSE)
 
 ```
 
-### Scheme rankings and SIZE of the reward.
+### 1.3-Expectations about friends reactions and reward AMOUNT.
+Expectations are more negatives when sharing the reward with two friends and when the reward is smaller.
+
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-
-g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
-         id.var = c("r_type", "r_amount"))
-
-ggplot(g2data, aes(x=value, fill=r_amount)) +
-        geom_bar(stat_count="identity",position="dodge",binwidth=1)+
-        facet_grid(~variable)+
-        scale_x_discrete(limit=c(1,2,3))+
-        scale_fill_brewer(palette="Set1")+
-        theme_bw()
-
-#dev.copy(jpeg,"figures/prueba2.jpeg")
-#dev.off()
-
-```
-
-#REWARD TYPE (Product vs Cash)
-
-### FUNCTION calculating t.tests between REWARD TYPE(prod./cash)
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-t<-lapply(final_df[,c(2:12,31:33)], 
-          function(x) t.test(x ~ final_df[,30], var.equal = TRUE))
-
-ps<-data.frame(p.value = sapply(t, getElement, name = "p.value"))
-format(ps, scientific = FALSE) 
-```
-
-### FUNCTION calculating Mann-Whitney (Non-Parametric) comparing REWARD TYPE(prod./cash)
-```{r, echo=FALSE, eval=TRUE, include=TRUE ,cache=TRUE}
-t<-lapply(final_df[,c(2:12,31:33)], 
-          function(x) wilcox.test(x ~ final_df[,30], var.equal = TRUE))
-
-ps<-data.frame(p.value = sapply(t, getElement, name = "p.value"))
-format(ps, scientific = FALSE) 
-```
-
-## Schemes ranking and TYPE of reward.
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-
-g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"), 
-         id.var = c("r_type", "r_amount"))
-
-ggplot(g2data, aes(x=value, fill=r_type, y=(..count..)/sum(..count..)))+
-        geom_bar(stat_count="identity",position="dodge",binwidth=1)+
-        facet_grid(~variable)+
-        scale_x_discrete(limit=c(1,2,3))+
-        #scale_y_continuous(labels = "percentage")+
-        scale_fill_brewer(palette="Set1")+
-        theme_bw()
-
-
-
-#dev.copy(jpeg,"figures/prueba2.jpeg")
-#dev.off()
-
-```
-
-
-
-# Expectations about friends reactions.
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-
 
 gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
          id.var = c("r_type", "r_amount"))
 
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", "2 Friends"))
+names(gdata)[2]<-"Reward"
 
-ggplot(gdata, aes(x=r_type, y=value, fill=variable))+
-        geom_bar(stat="summary", fun.y="mean", position="dodge")+ 
-        scale_y_continuous(limits =c(0,9), breaks=seq(0,9, 0.5))+
-        coord_cartesian(ylim=c(0, 4.5))+
+ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
+        #geom_bar(stat="summary", fun.y="mean", position="dodge")+ 
+        geom_boxplot(size = .75, position="dodge") +
+        geom_jitter(alpha = .5)+
+        scale_y_continuous(limits =c(0,9.1), breaks=seq(0,9, 0.5))+
+        #coord_cartesian(ylim=c(0, 4.5))+
         scale_fill_brewer(palette="Set1")+
+        labs(x="Numbers of Friends to share the reward with", 
+                y="Score-Expectations about friend's reaction")+
         theme_bw()
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()
 ```
 
-###Schemes Ranking, Type of rewards and expectation of frends reactions when sharing with 2 PEOPLE
+The next two plots show that the differences in terms of friend's expectations were only observed between REWARD AMOUNT but not in terms of TYPE OF REWARD.
+
+####1.3.1-Schemes Ranking, Type of rewards and expectation of frends reactions when sharing with 2 PEOPLE
 
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
@@ -193,7 +145,7 @@ ggplot(long_data, aes(x = factor(value), y = tot_exp2)) +
 #dev.off()
 ```
 
-###Schemes Ranking, Type of rewards and expectation of frends reactions when sharing with 1 Person
+####1.3.2-Schemes Ranking, Type of rewards and expectation of frends reactions when sharing with 1 Person
 
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
@@ -207,71 +159,198 @@ ggplot(long_data, aes(x = factor(value), y = tot_exp1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
   labs(x="Schemes Ranking", y="Expectations-sharing with 1 PERSON")
 
-#dev.copy(jpeg,"figures/prueba2.jpeg")
-#dev.off()
-```
-
-
-#Fears of Negative Evaluation Scale
-
-
-### Answers distribution.
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE, error=FALSE, warning=FALSE}
-
-
-g3data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
-             id.var = c("tot_neg_eval"))
-
-
-ggplot(final_df, aes(tot_neg_eval, fill=r_type))+
-        geom_histogram(colour="black", binwidth=0.3)+
-        scale_fill_brewer(palette="Set1")+
-        facet_grid( ~r_amount, margins = FALSE) +
-        theme_bw()
-
-ggplot(final_df, aes(tot_neg_eval, fill=gender))+
-        geom_histogram(colour="black", binwidth=0.3)+
-        scale_fill_brewer(palette="Set1")+
-        #facet_grid( ~r_amount, margins = FALSE) +
-        theme_bw()
-
-```
-
-### Fears of negatives evaluations, and typy of reward (amount/type).
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-
-ggplot(final_df, aes(x=r_type, y=tot_neg_eval, fill=r_amount)) +
-        geom_bar(stat="summary",fun.y="mean",position="dodge")+
-        scale_y_continuous(limits =c(0,5), breaks=seq(0,9, 0.5))+
-        coord_cartesian(ylim=c(0, 4.5))+
-        scale_fill_brewer(palette="Set1")+
-        theme_bw()
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()
 ```
 
+### 1.4-Scheme rankings and reward AMOUNT.
+No clear differences between preferences for sharing or not and the SIZE (amount) of the REWARD.
 
-## Correlation Matrix
-
-###Pearson
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-yy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
+
+g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount"))
+
+pct <- g2data %>% 
+  group_by(variable,r_amount,value) %>% 
+  summarise(n=n()) %>% 
+  group_by(variable) %>% 
+  mutate(perc=100*n/sum(n))
+
+pct$variable <- factor(pct$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+names(pct)[2]<-"Reward"
+
+ggplot(pct, aes(x=value, y=perc, fill=Reward) )+
+        geom_bar(stat="identity",position="dodge",binwidth=1)+
+        ylab("percent") + 
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Ranking", y="Percentage from the total of each alternative")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```
+
+#2- REWARD TYPE (Product vs Cash)
+
+Significant differences were found in terms of the type of reward (Cash or product) among the participants who preferred to share their reward (minority). 
+
+### 2.1- FUNCTION calculating t.tests between REWARD TYPE(prod./cash)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+t<-lapply(final_df[,c(2:12,31:33)], 
+          function(x) t.test(x ~ final_df[,30], var.equal = TRUE))
+
+ps<-data.frame(p.value = sapply(t, getElement, name = "p.value"))
+format(ps, scientific = FALSE) 
+```
+
+###2.2- FUNCTION calculating Mann-Whitney (Non-Parametric) comparing REWARD TYPE(prod./cash)
+```{r, echo=FALSE, eval=TRUE, include=TRUE ,cache=TRUE}
+t<-lapply(final_df[,c(2:12,31:33)], 
+          function(x) wilcox.test(x ~ final_df[,30], var.equal = TRUE))
+
+ps<-data.frame(p.value = sapply(t, getElement, name = "p.value"))
+format(ps, scientific = FALSE) 
+```
+
+### 2.3 TYPE OF REWARD and amount of friends to share the reward with.
+
+Rewards in the form of Products were favoured when they were no shared with anyone, or shared with two friends. Moreover, when the reward was shared with only one friend people prefered to have Cash as a reward. 
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount"))
+
+pct2 <- g2data %>% 
+  group_by(variable,r_type,value) %>% 
+  summarise(n=n()) %>% 
+  group_by(variable) %>% 
+  mutate(perc=100*n/sum(n))
+
+pct2$variable <- factor(pct2$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+names(pct2)[2]<-c("Reward")
+
+ggplot(pct2, aes(x=value, y=perc, fill=Reward) )+
+        geom_bar(stat="identity",position="dodge",binwidth=1)+
+        ylab("percent") + 
+        facet_grid(~ variable, margins=TRUE)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Ranking", y="Percentage from the total of each alternative")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```
+
+
+### 2.4- Expectations about friends reactions and TYPE OF REWARD.
+
+No differences were found in terms of the expactations about friends' reactions based on the TYPE OF REWARD. 
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
+         id.var = c("r_type", "r_amount"))
+
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", "2 Friends"))
+names(gdata)[1]<-"Reward"
+
+ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
+        #geom_bar(stat="summary", fun.y="mean", position="dodge")+ 
+        geom_boxplot(size = .75, position="dodge") +
+        geom_jitter(alpha = .5)+
+        scale_y_continuous(limits =c(0,9.1), breaks=seq(0,9, 0.5))+
+        #coord_cartesian(ylim=c(0, 4.5))+
+        scale_fill_brewer(palette="Set1")+
+        labs(x="Numbers of Friends to share the reward with", 
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+```
+
+
+#3- Fears of Negative Evaluation Scale
+
+###3.1- Answers distribution.
+No clear differences in the scale of Fears of Negative Evaluation were found when considering variables like size of the reward, type of reward, among others. 
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+names(final_df)[30]<-"Reward"
+
+ggplot(final_df, aes(tot_neg_eval, fill=Reward))+
+        geom_histogram(colour="black", binwidth=0.3)+
+        scale_fill_brewer(palette="Set1")+
+        facet_grid( Reward ~ r_amount, margins = FALSE) +
+        labs(x="Score - Fears of Negative Evaluations", y="Frequancy")+
+        theme_bw()
+
+```
+
+### 3.2 Fears of negatives evaluations, AGE and GENDER
+Younger people and Females have a tendency to have higher fears of Negative Evaluations. 
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+ggplot(final_df, aes(x=tot_neg_eval, y=age, color=gender)) +
+        geom_point(shape=16, size = I(5), alpha = I(0.4)) +
+        scale_colour_hue(l=50) + # darker
+        geom_smooth(method=lm,size=1) +
+        labs(x="Scale - Fears of Negative Evaluations", y="Age")+
+        scale_y_continuous(limits =c(10,90), breaks=seq(10,90,10))+
+        theme_bw()
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+```
+
+
+##4- Correlations Matrix
+
+***
+The strongest and most relevant correlations were between:
+
+* Expect.Reaction_1 Friend -- Gender (-)
+* Expect.Reaction_2 Friends -- Gender (-)
+* Expect.Reaction_2 Friends -- Choice not sharing with Friends (-)
+* Expect.Reaction_2 Friends -- Choice sharing with 2 Friends (+)
+* Fear Neg. Evaluation -- Gender (+)
+* Fear Neg. Evaluation -- Age (-)
+
+***
+
+
+###4.1- Pearson
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+rxy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
             vd_0f, vd_2f, vd_1f, gender, income, age, employ)
 
-yy[1:ncol(yy)] <- lapply(yy[1:ncol(yy)], function(x) as.numeric(x))
+rxy[1:ncol(rxy)] <- lapply(rxy[1:ncol(rxy)], function(x) as.numeric(x))
 
+rxy<-as.matrix(rxy) 
 rcorr(rxy, type="pearson")                           
 
 ```
-###Spearman
+###4.2- Spearman
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-yy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
+rxy<- select(final_df, tot_exp1,tot_exp2,tot_neg_eval, 
             vd_0f, vd_2f, vd_1f, gender, income, age, employ)
 
-yy[1:ncol(yy)] <- lapply(yy[1:ncol(yy)], function(x) as.numeric(x))
+rxy[1:ncol(rxy)] <- lapply(rxy[1:ncol(rxy)], function(x) as.numeric(x))
 
-rxy<-as.matrix(yy)   
+rxy<-as.matrix(rxy)   
 rcorr(rxy, type="spearman")                           
 ```
 
@@ -292,19 +371,23 @@ plot_back<-plot(fit_backward, main = "Backward Selection")
 ```
 
 ##Model 1
-```{r}
+```{r, eval=FALSE}
 
 long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
         id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",           "tot_exp2"))
 
 long_data[[7]]=factor(long_data[[7]])
 
-m1 <- polr(value ~ r_type , data = long_data, Hess=TRUE)
+m1 <- polr(factor(vd_2f) ~ tot_neg_eval , data = final_df, Hess=TRUE)
 ctable <- coef(summary(m1))
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
+p<-round(p,3)
 ctable <- cbind(ctable, "p value" = p)
 ctable
 
 
+reg<-select(final_df, -age)
+
 ```
 
+final_df[[2]]=factor(long_data[[2]])
