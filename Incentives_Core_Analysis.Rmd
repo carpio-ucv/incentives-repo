@@ -46,10 +46,13 @@ data_clean$employ <- factor(data_clean$employ, levels = c(1:6),
                     labels = c("FT-Emp", "PT-Emp","Unempl.", 
                                "Stud.", "Retired","Other")) 
 
-## Addint totals for Measures: Neg.Evaluations and Expectations 
+
+## Adding totals for Measures: Neg.Evaluations and Expectations 
 
 expect_1<-c("exp_x1_K","exp_x1_T", "exp_x1_S.R","exp_x1_G")
 expect_2<-c("exp_x2_K","exp_x2_T", "exp_x2_S.R","exp_x2_G")
+expect_all<-c("exp_x1_K","exp_x1_T", "exp_x1_S.R","exp_x1_G",
+              "exp_x2_K","exp_x2_T", "exp_x2_S.R","exp_x2_G")
 neg_eval<-c("neg.ev_1","neg.ev_2.R","neg.ev_3","neg.ev_4.R",
             "neg.ev_5","neg.ev_6","neg.ev_7.R","neg.ev_8",
             "neg.ev_9","neg.ev_10.R", "neg.ev_11","neg.ev_12")
@@ -57,8 +60,10 @@ neg_eval<-c("neg.ev_1","neg.ev_2.R","neg.ev_3","neg.ev_4.R",
 final_df<-data_clean %>% mutate(
         tot_exp1 = rowMeans(.[expect_1]),
         tot_exp2 = rowMeans(.[expect_2]),
+        exp_all = rowMeans(.[expect_2]),
         tot_neg_eval = rowMeans(.[neg_eval])
         )  
+
 
 # Code to audit cases ###################
 # final_df %>% filter(ID==90) %>% gather()
