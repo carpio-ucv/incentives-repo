@@ -72,27 +72,13 @@ final_df<-data_clean %>% mutate(
 ```
 
 
-#5- Regression Models
-```{r, echo=FALSE, comment=NA, eval=FALSE}
+#1- ORDINAL LOGISTIG REGRESSION
 
-fit_backward <- regsubsets(mpg ~.,data = mtcars, method = "backward", nbest=1, force.in =8) 
-
-fit_forward <- regsubsets(mpg ~.,data = mtcars, method = "forward", nbest=1, force.in =8) 
-
-
-fit_step <- regsubsets(mpg ~.,data = mtcars, method = "seqrep", nbest=1, force.in =8) 
-
-
-par(mfrow=c(1,2))
-plot_forward<-plot(fit_forward, main = "Forward Selection")
-plot_back<-plot(fit_backward, main = "Backward Selection")
-```
-
-### 5.1- Model Dep. Variable sharing with 2 friends
+### 1.1- Model Dep. Variable sharing with 2 friends
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
 library("MASS")# Ordinal logistic regression
 
-long_data<-melt(final_df, measure.var= c("vd_1f"),
+long_data<-melt(final_df, measure.var= c("vd_2f"),
         id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
                    "tot_exp2"))
 
@@ -108,13 +94,14 @@ ctable
 
 ```
 
-### 5.2- Model Dep. Variable sharing with 1 friend
+### 1.2- Model Dep. Variable sharing with 1 friend
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 #library("MASS")# Ordinal logistic regression
 
-long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
-        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",           "tot_exp2"))
+long_data<-melt(final_df, measure.var= c("vd_1f"),
+        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
+                   "tot_exp2"))
 
 long_data[[7]]=factor(long_data[[7]])
 
@@ -128,13 +115,14 @@ ctable
 
 ```
 
-### 5.3- Model Dep. Variable not sharing 
+### 1.3- Model Dep. Variable not sharing 
 ```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 #library("MASS")# Ordinal logistic regression
 
-long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
-        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",           "tot_exp2"))
+long_data<-melt(final_df, measure.var= c("vd_0f"),
+        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
+                   "tot_exp2"))
 
 long_data[[7]]=factor(long_data[[7]])
 
@@ -145,6 +133,29 @@ p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
 p<-round(p,3)
 ctable <- cbind(ctable, "p value" = p)
 ctable
+
+```
+
+#1- ORDINAL REGRESSION
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+library("ordinal")# Ordinal logistic regression
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2")) 
+
+long_data[[8]]=factor(long_data[[8]])
+
+
+mod <- clm(value ~ r_type+ r_amount + variable,
+           data = long_data)
+
+mod2 <- clm(value ~ r_type+ r_amount + variable + tot_neg_eval,
+           data = long_data)
+
+summary(mod)
+summary(mod2)
 
 ```
 
