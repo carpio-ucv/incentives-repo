@@ -70,13 +70,102 @@ final_df<-data_clean %>% mutate(
 #########################################
 
 ```
+#1- First Choice preferences 
+
+##1.1- F.C. Ordinal Logistic Regression (MASS package)
+
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+library("MASS")# Ordinal logistic regression
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all")) 
+
+olr_data<- filter(long_data, value==1)
 
 
-#1- ORDINAL LOGISTIG REGRESSION
+mod <- polr(variable ~ r_type+ r_amount+ exp_all,
+           data = olr_data, Hess=TRUE) # Hess=true, returns 
+#observed information matrix from optimization (called the Hessian) which is used to get standard errors
+
+summary(mod)
+ctable <- coef(summary(mod))
+p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
+p<-round(p,3)
+ctable <- cbind(ctable, "p value" = p)
+ctable
+
+mod1 <- polr(variable ~ r_type+ r_amount+ exp_all+ tot_neg_eval,
+           data = olr_data, Hess=TRUE)
+ctable <- coef(summary(mod1))
+p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
+p<-round(p,3)
+ctable <- cbind(ctable, "p value" = p)
+ctable
+
+```
+
+## 1.2- F.C. ORDINAL LOGISTIC REGRESSION (ordinal package)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+library("ordinal")# Ordinal logistic 
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all")) 
+
+mr_data<- filter(long_data, value==1)
+
+mod <- clm(variable ~ r_type+ r_amount+ exp_all,
+           data = mr_data, Hess=TRUE)
+summary(mod)
+
+
+mod2 <- clm(variable ~ r_type+ r_amount+ exp_all+ tot_neg_eval,
+           data = mr_data, Hess=TRUE)
+summary(mod2)
+
+mod3 <- clm(variable ~ r_type+ r_amount* exp_all + tot_neg_eval,
+           data = mr_data, Hess=TRUE)
+summary(mod3)
+
+```
+
+
+## 1.3- MULTINOMIAL REGRESSION (nnet package)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+library("nnet")# Multinomial regression
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all")) 
+
+mr_data<- filter(long_data, value==1)
+
+
+mod <- multinom(variable ~ r_type+ r_amount+ exp_all,
+           data = mr_data)
+summary(mod)
+
+z <- summary(mod)$coefficients/summary(mod)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1))*2
+p
+
+
+
+
+mod2 <- clm(variable ~ r_type+ r_amount+ exp_all+ tot_neg_eval,
+           data = mr_data, Hess=TRUE)
+summary(mod2)
+
+```
+
+## 1.3- MULTINOMIAL REGRESSION (AVRI package)
+
 
 ### 1.1- Model Dep. Variable sharing with 2 friends
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
-library("MASS")# Ordinal logistic regression
+```{r, echo=FALSE, eval=TRUE, include=FALSE, cache=FALSE}
+library("MASS")# Ordinal logistic 
 
 long_data<-melt(final_df, measure.var= c("vd_2f"),
         id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
@@ -92,7 +181,12 @@ p<-round(p,3)
 ctable <- cbind(ctable, "p value" = p)
 ctable
 
-```
+### ordinal regresion
+mod <- clm(value ~ r_type+ r_amount+ tot_exp1+ tot_exp2,
+           data = long_data)
+summary(mod)
+
+
 
 ### 1.2- Model Dep. Variable sharing with 1 friend
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
@@ -116,7 +210,7 @@ ctable
 ```
 
 ### 1.3- Model Dep. Variable not sharing 
-```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+```{r,echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
 
 #library("MASS")# Ordinal logistic regression
 
@@ -136,16 +230,16 @@ ctable
 
 ```
 
-#1- ORDINAL REGRESSION
+#1- ORDINAL LOGISTIC REGRESSION
 
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+```{r, echo=FALSE, eval=TRUE, include=FALSE, cache=FALSE}
 library("ordinal")# Ordinal logistic regression
 
 long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
         id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
-                   "tot_exp1","tot_exp2")) 
+                   "tot_exp1","tot_exp2", "exp_all")) 
 
-long_data[[8]]=factor(long_data[[8]])
+long_data[[9]]=factor(long_data[[9]])
 
 
 mod <- clm(value ~ r_type+ r_amount + variable,
@@ -154,8 +248,17 @@ mod <- clm(value ~ r_type+ r_amount + variable,
 mod2 <- clm(value ~ r_type+ r_amount + variable + tot_neg_eval,
            data = long_data)
 
+
+mod3 <- clm(value ~ r_type+ r_amount + variable + tot_neg_eval+
+                    exp_all, data = long_data)
+
+mod4 <- clm(value ~ r_type*variable + tot_neg_eval+ exp_all*r_amount, data = long_data)
+
+mod5 <- clm(value ~ r_type+variable + tot_neg_eval+ variable*r_amount, data = long_data)
+
+
 summary(mod)
 summary(mod2)
-
+summary(mod3)
 ```
 

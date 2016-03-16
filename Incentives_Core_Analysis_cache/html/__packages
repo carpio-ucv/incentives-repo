@@ -9,3 +9,5 @@ tidyr
 reshape2
 leaps
 MASS
+ordinal
+nnet

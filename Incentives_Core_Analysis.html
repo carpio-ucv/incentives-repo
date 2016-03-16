@@ -68,26 +68,134 @@ img {
 </div>
 
 
-<div id="ordinal-logistig-regression" class="section level1">
-<h1>1- ORDINAL LOGISTIG REGRESSION</h1>
-<div id="model-dep.-variable-sharing-with-2-friends" class="section level3">
-<h3>1.1- Model Dep. Variable sharing with 2 friends</h3>
+<div id="first-choice-preferences" class="section level1">
+<h1>1- First Choice preferences</h1>
+<div id="ordinal-logistic-regression" class="section level2">
+<h2>1.1- Ordinal Logistic Regression</h2>
+<pre><code>## Call:
+## polr(formula = variable ~ r_type + r_amount + exp_all, data = olr_data, 
+##     Hess = TRUE)
+## 
+## Coefficients:
+##                 Value Std. Error t value
+## r_typeProduct -0.2989    0.27790 -1.0754
+## r_amount£2     0.2412    0.27865  0.8655
+## exp_all       -0.1897    0.08831 -2.1476
+## 
+## Intercepts:
+##             Value   Std. Error t value
+## vd_0f|vd_1f  1.1116  0.3290     3.3792
+## vd_1f|vd_2f  1.8522  0.3478     5.3249
+## 
+## Residual Deviance: 430.0152 
+## AIC: 440.0152</code></pre>
+<pre><code>##                    Value Std. Error    t value p value
+## r_typeProduct -0.2988566 0.27789689 -1.0754226   0.282
+## r_amount£2     0.2411614 0.27864926  0.8654656   0.387
+## exp_all       -0.1896614 0.08831495 -2.1475571   0.032
+## vd_0f|vd_1f    1.1116297 0.32896571  3.3791658   0.001
+## vd_1f|vd_2f    1.8522300 0.34784506  5.3248707   0.000</code></pre>
+<pre><code>##                     Value Std. Error    t value p value
+## r_typeProduct -0.29976391 0.27792912 -1.0785624   0.281
+## r_amount£2     0.23904607 0.27878031  0.8574712   0.391
+## exp_all       -0.18918930 0.08836692 -2.1409516   0.032
+## tot_neg_eval  -0.04686807 0.16905697 -0.2772324   0.782
+## vd_0f|vd_1f    0.98629271 0.55770939  1.7684707   0.077
+## vd_1f|vd_2f    1.72709997 0.56845877  3.0382150   0.002</code></pre>
+</div>
+<div id="multinomial-regression-ordinal-package" class="section level2">
+<h2>1.2- MULTINOMIAL REGRESSION (ordinal package)</h2>
+<pre><code>## Warning: package 'ordinal' was built under R version 3.2.4</code></pre>
 <pre><code>## 
-## Attaching package: 'MASS'
+## Attaching package: 'ordinal'
 ## 
 ## The following object is masked from 'package:dplyr':
 ## 
-##     select</code></pre>
-<pre><code>##                    Value Std. Error    t value p value
-## r_typeProduct -2.0550990  0.2244066  -9.157924   0.000
-## r_amount£2    -0.2513397  0.2169211  -1.158669   0.247
-## tot_exp1      -0.1599962  0.1031618  -1.550924   0.121
-## tot_exp2       0.2324881  0.1007580   2.307390   0.021
-## 1|2           -3.7693853  0.3289391 -11.459218   0.000
-## 2|3           -0.8185702  0.2624621  -3.118812   0.002</code></pre>
+##     slice</code></pre>
+<pre><code>## formula: variable ~ r_type + r_amount + exp_all
+## data:    mr_data
+## 
+##  link  threshold nobs logLik  AIC    niter max.grad cond.H 
+##  logit flexible  401  -215.01 440.02 8(0)  9.75e-13 1.5e+02
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)  
+## r_typeProduct -0.29886    0.27790  -1.075   0.2822  
+## r_amount£2     0.24116    0.27865   0.865   0.3868  
+## exp_all       -0.18966    0.08832  -2.148   0.0317 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Threshold coefficients:
+##             Estimate Std. Error z value
+## vd_0f|vd_1f   1.1116     0.3290   3.379
+## vd_1f|vd_2f   1.8522     0.3478   5.325</code></pre>
+<pre><code>## formula: variable ~ r_type + r_amount + exp_all + tot_neg_eval
+## data:    mr_data
+## 
+##  link  threshold nobs logLik  AIC    niter max.grad cond.H 
+##  logit flexible  401  -214.97 441.94 8(0)  9.50e-13 6.0e+02
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)  
+## r_typeProduct -0.29976    0.27793  -1.079   0.2808  
+## r_amount£2     0.23905    0.27878   0.857   0.3912  
+## exp_all       -0.18919    0.08837  -2.141   0.0323 *
+## tot_neg_eval  -0.04687    0.16906  -0.277   0.7816  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Threshold coefficients:
+##             Estimate Std. Error z value
+## vd_0f|vd_1f   0.9863     0.5577   1.768
+## vd_1f|vd_2f   1.7271     0.5685   3.038</code></pre>
 </div>
-<div id="model-dep.-variable-sharing-with-1-friend" class="section level3">
-<h3>1.2- Model Dep. Variable sharing with 1 friend</h3>
+<div id="multinomial-regression-nnet-package" class="section level2">
+<h2>1.3- MULTINOMIAL REGRESSION (nnet package)</h2>
+<pre><code>## formula: variable ~ r_type + r_amount + exp_all
+## data:    mr_data
+## 
+##  link  threshold nobs logLik  AIC    niter max.grad cond.H 
+##  logit flexible  401  -215.01 440.02 8(0)  9.75e-13 1.5e+02
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)  
+## r_typeProduct -0.29886    0.27790  -1.075   0.2822  
+## r_amount£2     0.24116    0.27865   0.865   0.3868  
+## exp_all       -0.18966    0.08832  -2.148   0.0317 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Threshold coefficients:
+##             Estimate Std. Error z value
+## vd_0f|vd_1f   1.1116     0.3290   3.379
+## vd_1f|vd_2f   1.8522     0.3478   5.325</code></pre>
+<pre><code>## formula: variable ~ r_type + r_amount + exp_all + tot_neg_eval
+## data:    mr_data
+## 
+##  link  threshold nobs logLik  AIC    niter max.grad cond.H 
+##  logit flexible  401  -214.97 441.94 8(0)  9.50e-13 6.0e+02
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)  
+## r_typeProduct -0.29976    0.27793  -1.079   0.2808  
+## r_amount£2     0.23905    0.27878   0.857   0.3912  
+## exp_all       -0.18919    0.08837  -2.141   0.0323 *
+## tot_neg_eval  -0.04687    0.16906  -0.277   0.7816  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Threshold coefficients:
+##             Estimate Std. Error z value
+## vd_0f|vd_1f   0.9863     0.5577   1.768
+## vd_1f|vd_2f   1.7271     0.5685   3.038</code></pre>
+</div>
+</div>
+<div id="ordinal-logistig-regression" class="section level1">
+<h1>1- ORDINAL LOGISTIG REGRESSION</h1>
+<p>Predict the rankings of the scheme where the reward is shared with two people.</p>
+<div id="model-dep.-variable-sharing-with-2-friends" class="section level3">
+<h3>1.1- Model Dep. Variable sharing with 2 friends</h3>
 <pre><code>##                     Value Std. Error    t value p value
 ## r_typeProduct  2.36280271  0.2336286 10.1135013   0.000
 ## r_amount£2    -0.04582721  0.2188241 -0.2094249   0.834
@@ -98,63 +206,10 @@ img {
 </div>
 <div id="model-dep.-variable-not-sharing" class="section level3">
 <h3>1.3- Model Dep. Variable not sharing</h3>
-<pre><code>##                     Value Std. Error    t value p value
-## r_typeProduct -0.38179612  0.2787038 -1.3698991   0.171
-## r_amount£2     0.28707232  0.2799445  1.0254614   0.305
-## tot_exp1       0.01864317  0.1540906  0.1209883   0.904
-## tot_exp2      -0.21457918  0.1517457 -1.4140706   0.157
-## 1|2            1.06533423  0.3315942  3.2127652   0.001
-## 2|3            1.94949262  0.3555995  5.4822712   0.000</code></pre>
 </div>
 </div>
 <div id="ordinal-regression" class="section level1">
 <h1>1- ORDINAL REGRESSION</h1>
-<pre><code>## Warning: package 'ordinal' was built under R version 3.2.4</code></pre>
-<pre><code>## 
-## Attaching package: 'ordinal'
-## 
-## The following object is masked from 'package:dplyr':
-## 
-##     slice</code></pre>
-<pre><code>## formula: value ~ r_type + r_amount + variable
-## data:    long_data
-## 
-##  link  threshold nobs logLik  AIC     niter max.grad cond.H 
-##  logit flexible  1203 -976.46 1964.92 5(0)  1.13e-08 4.8e+01
-## 
-## Coefficients:
-##                 Estimate Std. Error z value Pr(&gt;|z|)    
-## r_typeProduct -0.0003355  0.1205162  -0.003    0.998    
-## r_amount£2    -0.0479544  0.1203075  -0.399    0.690    
-## variablevd_1f  3.7548010  0.1875263  20.023   &lt;2e-16 ***
-## variablevd_2f  3.8208474  0.1886603  20.253   &lt;2e-16 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Threshold coefficients:
-##     Estimate Std. Error z value
-## 1|2   1.5916     0.1612   9.874
-## 2|3   3.8528     0.1925  20.019</code></pre>
-<pre><code>## formula: value ~ r_type + r_amount + variable + tot_neg_eval
-## data:    long_data
-## 
-##  link  threshold nobs logLik  AIC     niter max.grad cond.H 
-##  logit flexible  1203 -976.43 1966.86 5(0)  1.13e-08 4.1e+02
-## 
-## Coefficients:
-##                 Estimate Std. Error z value Pr(&gt;|z|)    
-## r_typeProduct -0.0005365  0.1205213  -0.004    0.996    
-## r_amount£2    -0.0481320  0.1203112  -0.400    0.689    
-## variablevd_1f  3.7551791  0.1875337  20.024   &lt;2e-16 ***
-## variablevd_2f  3.8212143  0.1886779  20.253   &lt;2e-16 ***
-## tot_neg_eval  -0.0177988  0.0741269  -0.240    0.810    
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Threshold coefficients:
-##     Estimate Std. Error z value
-## 1|2   1.5440     0.2554   6.046
-## 2|3   3.8052     0.2758  13.796</code></pre>
 </div>
 
 
