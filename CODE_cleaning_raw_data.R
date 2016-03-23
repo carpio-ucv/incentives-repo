@@ -52,7 +52,7 @@ l4<- nrow(tidy_g4)
 
 # Create vector defining the "Reward Amount"
 r_amount_length<-c(l1,l2,l3,l4)
-r_amount<- rep.int(c(1,2,1,2), times= r_amount_length)
+r_amount<- rep.int(c(2,1,2,1), times= r_amount_length)
 
 # Create vector defining the "Type of Reward" (Cach vs Product)
 r_type_length<-c(l1+l2, l3+l4)
@@ -70,7 +70,7 @@ df[1:ncol(df)] <- lapply(df[1:ncol(df)], function(x) as.numeric(x))
 new_values<-function(x){
         data=NULL
         
-        pos<-c(4:5,7:9,11,12,14,16,17,19,20,22,23)
+        pos<-c(4:5,7:9,11,13,15,18,21)
         
         x[,pos]<- x[,pos]/10
         
@@ -86,7 +86,7 @@ new_values<-function(x){
         x[,rev.ex][x[,rev.ex]==20] <- (8)
         x[,rev.ex][x[,rev.ex]==10] <- (9)
         
-        rev.neg<-c(13,15,18,21)
+        rev.neg<-c(12,14,16,17,19,20,22,23)   
         
         x[,rev.neg][x[,rev.neg]==50] <- (1)
         x[,rev.neg][x[,rev.neg]==40] <- (2)

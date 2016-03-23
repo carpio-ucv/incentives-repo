@@ -19,6 +19,7 @@ library("tidyr")
 library("ggplot2")
 library("reshape2")
 library("leaps")
+library("car")
 
 
 ## read raw_data
@@ -30,7 +31,7 @@ data_clean<- mutate(data_clean_imp, ID= X+1) %>%
 ##Define factor variables
 
 data_clean$r_amount <- factor(data_clean$r_amount, levels = c(1,2),
-                      labels = c("£5", "£2")) 
+                      labels = c("£2", "£5")) 
 
 data_clean$r_type <- factor(data_clean$r_type, levels = c(1,2),
                     labels = c("Cash", "Product")) 
@@ -60,67 +61,153 @@ neg_eval<-c("neg.ev_1","neg.ev_2.R","neg.ev_3","neg.ev_4.R",
 final_df<-data_clean %>% mutate(
         tot_exp1 = rowMeans(.[expect_1]),
         tot_exp2 = rowMeans(.[expect_2]),
-        exp_all = rowMeans(.[expect_2]),
+        exp_all = rowMeans(.[expect_all]),
         tot_neg_eval = rowMeans(.[neg_eval])
         )  
 
+#final_df %>% group_by(r_amount) %>% summarise(avg = mean(age))
 
 # Code to audit cases ###################
 # final_df %>% filter(ID==90) %>% gather()
 #########################################
 
 ```
-#1- First Choice preferences 
 
-## 1.3- MULTINOMIAL REGRESSION (nnet package)
+## CHI SQUARE FIRST CHOICE
+More than 80% prefered not to share the rward with anyone as a first choice. Such difference was highly significant. 
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
-
-library("nnet")# Multinomial regression
 
 long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
         id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
                    "tot_exp1","tot_exp2", "exp_all")) 
 
-mr_data<- filter(long_data, value==1)
+chi_data<- filter(long_data, value==1)
 
-## MODEL 1
-mod <- multinom(variable ~ r_type+ r_amount+ exp_all,
-           data = mr_data)
-modx<-multinom(variable ~ r_type+ r_amount+ exp_all
-             + tot_neg_eval, data = mr_data)
+#Summarise first choice frequencies and proportions
+fr<-as.matrix(table(chi_data$variable))
+p <- c(fr[1,1]/nrow(chi_data), fr[2,1]/nrow(chi_data),
+                fr[3,1]/nrow(chi_data)) 
 
-modx2<-multinom(variable ~ r_type+ exp_all, data = mr_data)
-
-
-
-z <- summary(mod)$coefficients/summary(mod)$standard.errors
-p <- (1 - pnorm(abs(z), 0, 1))*2
+#calculating chi square
+fr
 p
-exp(coef(mod))
+chisq.test(fr)
 
-head(pp <- fitted(mod))
+```
 
-###
+
+
+#1- First Choice preferences 
+
+## 1.3- MULTINOMIAL REGRESSION (nnet package)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE}
+
+library("nnet")# Multinomial regression
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all", "gender",
+                   "income", "age", "employ")) 
+
+mr_data<- filter(long_data, value==1)
+mr_data[[3]]=as.ordered(mr_data[[3]])
+
+## MODELS
+mod<- multinom(variable ~ r_type + r_amount + exp_all + tot_neg_eval+
+                       gender+ income+ employ,data = mr_data)
+
+mod1<- update(mod, variable ~ r_type + r_amount + exp_all + 
+                      gender+ income+ employ)
+
+mod2<- update(mod, variable ~ r_type + r_amount + exp_all + 
+                      income+ employ)
+
+mod3<- update(mod, variable ~ r_type + exp_all + 
+                      income+ employ)
+
+mod4<- update(mod, variable ~ r_type + exp_all + income)
+
+mod5<- update(mod, variable ~ r_type + exp_all)
+
+## MODEL FRAME FUNCTION
+#Function that takes a given model an return a table with relevant values, including Likelihood Ratio test. 
+mod_frame <- function(m){
+        
+        mod<-summary(m)
+        n<-length(mod$coefficients[1,])*2
+#Estimate Table values        
+        coef<-matrix(rbind(mod$coefficients[1,],
+                   mod$coefficients[2,]),n ,1)
+        se<-matrix(rbind(mod$standard.errors[1,],
+                 mod$standard.errors[2,]), n,1)
+        z <-matrix(rbind(mod$coefficients[1,]/mod$standard.errors[1,],
+                         mod$coefficients[2,]/mod$standard.errors[2,]))
+        p <-((1 - pnorm(abs(z), 0, 1))*2)
+        
+        odds<- exp(coef)
+       
+        r.deviance<-mod$deviance
+        AIC<-mod$AIC
+        
+        coef.name<-matrix(rep(mod$vcoefnames,2),n,1)
+        cond<- matrix(cbind(rep(c("1_Friend"),n/2),
+                        rep(c("2_Friends"),n/2)),n,1)
+#Build table        
+df<- as.data.frame(cbind(cond, coef.name)) %>% 
+        cbind(round(cbind(coef,se,z,p,odds),3))
+colnames(df)<-c("Condition","Variable","Coeff", "Sd.Error",
+                "z.value", "p.value", "odds")
+print(mod$call)
+print(df)
+
+#Model doodness of fitness
+fit<-(cbind(r.deviance,AIC))
+colnames(fit)<-c("Residual Deviance","AIC")
+print(fit)
+#Likelihood Ratio Test
+print(Anova(m))
+
+}
+
+## MODELS ESTIMATION
+mod_frame(mod1)
+mod_frame(mod2)
+mod_frame(mod3)
+
+### BROBABILITY PLOT OF THE BEST PREDICTIVE MODEL
 dexp <- data.frame(r_type = rep(c("Cash", "Product"), each = 9),
   exp_all = rep(c(1:9), 2))
 
+dexp2 <- data.frame(r_type = rep(c("Cash", "Product"), each = 9,
+                length.out=90), exp_all = rep(c(1:9), 10),
+                income=rep(1:5, each=18,length.out=90)) 
+#dexp2[[3]]=as.factor(dexp2[[3]])
+
+dexp2$income<-factor(dexp2$income, levels = c(1:5),
+                    labels = c("< 15k", "15k-19k",
+                               "20k-29k", "> 30k", "No.Ans")) 
+
+
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp, predict(modx2, newdata = dexp, type = "probs", 
+pp.exp <- cbind(dexp2, predict(mod4, newdata = dexp2, type = "probs", 
                               se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
 by(pp.exp[, 3:5], pp.exp$r_type, colMeans)
 
 ## melt data set to long for ggplot2
-lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type"), value.name = "probability")
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type", "income"), value.name = "probability")
+
 head(lpp) # view first few rows
 
 ## plot predicted probabilities across write values for
 ## each level of ses facetted by program type
 ggplot(lpp, aes(x = exp_all, y = probability, colour = r_type)) +
   geom_line() +
-  facet_grid(variable ~ ., scales="free")
+  facet_grid(variable ~ income, scales="free")
+
 ```
+
 
 
 ```{r,echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}

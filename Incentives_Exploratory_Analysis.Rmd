@@ -29,7 +29,7 @@ data_clean<- mutate(data_clean_imp, ID= X+1) %>%
 
 ##Define factor variables
 
-data_clean$r_amount <- factor(data_clean$r_amount, levels = c(1,2),
+data_clean$r_amount <- factor(data_clean$r_amount, levels = c(2,1),
                       labels = c("£5", "£2")) 
 
 data_clean$r_type <- factor(data_clean$r_type, levels = c(1,2),
@@ -63,6 +63,7 @@ final_df<<-data_clean %>% mutate(
         tot_neg_eval = rowMeans(.[neg_eval])
         )  
 
+final_df %>% group_by(r_amount) %>% summarise(avg = mean(age))
 # Code to audit cases ###################
 # final_df %>% filter(ID==90) %>% gather()
 #########################################
@@ -399,6 +400,76 @@ rcorr(rxy, type="spearman")
 ```
 
 
+##6-Additional Demographics 
+
+###6.1- Employment / Scheme preferences
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("employ"))
+
+fr1 <- data %>% 
+        group_by(variable,employ,value) %>% 
+        summarise(n=n()) 
+fr2 <- fr1 %>% 
+        group_by(employ, variable) %>% 
+        summarise(n=sum(n))
+pct <- left_join(fr1, fr2, by = c("employ"="employ", 
+                                  "variable"="variable")) %>%
+        mutate(perc=100*n.x/(n.y)) 
 
 
+pct$variable <- factor(pct$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+pct$value <- factor(pct$value)
+
+names(pct)[2]<-"employ"
+
+ggplot(pct, aes(x=value, y=perc, fill=variable) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ employ)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```
+
+
+###6.2- Income / Scheme preferences
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("income"))
+
+
+fr1 <- data %>% 
+        group_by(variable,income,value) %>% 
+        summarise(n=n()) 
+fr2 <- fr1 %>% 
+        group_by(income, variable) %>% 
+        summarise(n=sum(n))
+pct <- left_join(fr1, fr2, by = c("income"="income", 
+                                  "variable"="variable")) %>%
+        mutate(perc=100*n.x/(n.y)) 
+
+pct$variable <- factor(pct$variable, 
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+pct$value <- factor(pct$value) 
+
+names(pct)[2]<-"income"
+
+ggplot(pct, aes(x=value, y=perc, fill=variable) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ income)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```
 
