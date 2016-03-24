@@ -113,21 +113,47 @@ mr_data<- filter(long_data, value==1)
 mr_data[[3]]=as.ordered(mr_data[[3]])
 
 ## MODELS
-mod<- multinom(variable ~ r_type + r_amount + exp_all + tot_neg_eval+
-                       gender+ income+ employ,data = mr_data)
+mod1<- multinom(variable ~ r_type + exp_all + income + 
+                employ + r_amount + gender + tot_neg_eval
+                ,data = mr_data)
+mod2<-update(mod1, . ~ . - tot_neg_eval)
+mod3<-update(mod2, . ~ . - gender)
+mod4<-update(mod3, . ~ . - r_amount)
+mod5<-update(mod4, . ~ . - employ)
 
-mod1<- update(mod, variable ~ r_type + r_amount + exp_all + 
-                      gender+ income+ employ)
+#Additional models
+mod6<-update(mod4, . ~ . - income)
+mod7<-update(mod4, . ~ . - exp_all)
 
-mod2<- update(mod, variable ~ r_type + r_amount + exp_all + 
-                      income+ employ)
 
-mod3<- update(mod, variable ~ r_type + exp_all + 
-                      income+ employ)
+mod1x<- multinom(variable ~ r_type, data = mr_data)   0.0126 *
+mod2x<- multinom(variable ~ exp_all, data = mr_data)  0.1136
+mod3x<- multinom(variable ~ income, data = mr_data)   0.03547 *
+mod4x<- multinom(variable ~ employ, data = mr_data)   0.3815** s
+mod5x<- multinom(variable ~ r_amount, data = mr_data) 0.6254  
+mod6x<- multinom(variable ~ gender, data = mr_data)   0.6475
+mod7x<- multinom(variable ~ tot_neg_eval, data = mr_data)  0.727 
 
-mod4<- update(mod, variable ~ r_type + exp_all + income)
+mod4<
+## UNIVARIABLE MODEL 
+v<-c("r_type", "exp_all", "income", "employ", "r_amount",
+     "gender", "tot_neg_eval")
 
-mod5<- update(mod, variable ~ r_type + exp_all)
+univariable <- function(v){
+        
+        tab=NULL
+        LR=NULL
+        
+        for (i in 1:length(v)){
+        
+        tab<-multinom(variable ~v[i], data= mr_data)
+        
+        LR<- Anova(tab)
+        
+        table<- cbind(LR$"LR Chisq", LR$Df, LR$"Pr(>Chisq)")
+        print(table)
+        }
+}
 
 ## MODEL FRAME FUNCTION
 #Function that takes a given model an return a table with relevant values, including Likelihood Ratio test. 
@@ -174,39 +200,43 @@ mod_frame(mod1)
 mod_frame(mod2)
 mod_frame(mod3)
 
-### BROBABILITY PLOT OF THE BEST PREDICTIVE MODEL
-dexp <- data.frame(r_type = rep(c("Cash", "Product"), each = 9),
-  exp_all = rep(c(1:9), 2))
+```
 
-dexp2 <- data.frame(r_type = rep(c("Cash", "Product"), each = 9,
-                length.out=90), exp_all = rep(c(1:9), 10),
-                income=rep(1:5, each=18,length.out=90)) 
-#dexp2[[3]]=as.factor(dexp2[[3]])
+### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL
+```{r}
 
-dexp2$income<-factor(dexp2$income, levels = c(1:5),
-                    labels = c("< 15k", "15k-19k",
-                               "20k-29k", "> 30k", "No.Ans")) 
+v.r_type<-c("Cash", "Product")
+v.exp_all<-c(1:9)
+v.r_amount<-c("£2", "£5")
+v.income<- factor(1:5, levels = c(1:5),
+        labels = c("< 15k", "15k-19k", "20k-29k", "> 30k","No.Ans")) v2.income<- factor(1, levels = c(1),labels = c("< 15k"))
+
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v2.income)
+colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
 
 
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp2, predict(mod4, newdata = dexp2, type = "probs", 
-                              se = TRUE))
+pp.exp <- cbind(dexp, predict(mod5r, newdata = dexp, 
+                               type = "probs", se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
-by(pp.exp[, 3:5], pp.exp$r_type, colMeans)
+by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
 
 ## melt data set to long for ggplot2
-lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type", "income"), value.name = "probability")
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type",
+                "income", "r_amount"), value.name = "probability")
 
 head(lpp) # view first few rows
 
 ## plot predicted probabilities across write values for
 ## each level of ses facetted by program type
 ggplot(lpp, aes(x = exp_all, y = probability, colour = r_type)) +
-  geom_line() +
-  facet_grid(variable ~ income, scales="free")
+  geom_line(size=1) +
+  facet_grid(variable ~ r_amount*income, scales="free")
+
 
 ```
+
 
 
 
