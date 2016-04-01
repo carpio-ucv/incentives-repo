@@ -473,3 +473,31 @@ ggplot(pct, aes(x=value, y=perc, fill=variable) )+
 
 ```
 
+###6.3- Income / Scheme preferences (AVERAGE RANKING)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("income"))
+
+avg_rank<-data %>% group_by(variable,income) %>%
+        summarise(rank=mean(value))
+
+
+ggplot(avg_rank, aes(x=variable, y=rank, fill=variable) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ income)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+ggplot(avg_rank, aes(x=income, y=rank, fill=income) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="YIOrRd")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```

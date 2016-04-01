@@ -70,11 +70,11 @@ df[1:ncol(df)] <- lapply(df[1:ncol(df)], function(x) as.numeric(x))
 new_values<-function(x){
         data=NULL
         
-        pos<-c(4:5,7:9,11,13,15,18,21)
+        pos<-c(6,10,13,15,18,21)
         
         x[,pos]<- x[,pos]/10
         
-        rev.ex<-c(6,10)
+        rev.ex<-c(4:5,7:9,11)
         
         x[,rev.ex][x[,rev.ex]==90] <- (1)
         x[,rev.ex][x[,rev.ex]==80] <- (2)

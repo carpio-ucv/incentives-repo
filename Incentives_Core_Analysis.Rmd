@@ -68,7 +68,7 @@ final_df<-data_clean %>% mutate(
 #final_df %>% group_by(r_amount) %>% summarise(avg = mean(age))
 
 # Code to audit cases ###################
-# final_df %>% filter(ID==90) %>% gather()
+# final_df %>% filter(ID==233) %>% gather()
 #########################################
 
 ```
@@ -95,73 +95,15 @@ chisq.test(fr)
 
 ```
 
+###**Model Estimation -Function 
+Takes a given multinomial model an return a table with all relevant values, including Likelihood Ratio test. 
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
 
-
-#1- First Choice preferences 
-
-## 1.3- MULTINOMIAL REGRESSION (nnet package)
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE}
-
-library("nnet")# Multinomial regression
-
-long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
-        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
-                   "tot_exp1","tot_exp2", "exp_all", "gender",
-                   "income", "age", "employ")) 
-
-mr_data<- filter(long_data, value==1)
-mr_data[[3]]=as.ordered(mr_data[[3]])
-
-## MODELS
-mod1<- multinom(variable ~ r_type + exp_all + income + 
-                employ + r_amount + gender + tot_neg_eval
-                ,data = mr_data)
-mod2<-update(mod1, . ~ . - tot_neg_eval)
-mod3<-update(mod2, . ~ . - gender)
-mod4<-update(mod3, . ~ . - r_amount)
-mod5<-update(mod4, . ~ . - employ)
-
-#Additional models
-mod6<-update(mod4, . ~ . - income)
-mod7<-update(mod4, . ~ . - exp_all)
-
-
-mod1x<- multinom(variable ~ r_type, data = mr_data)   0.0126 *
-mod2x<- multinom(variable ~ exp_all, data = mr_data)  0.1136
-mod3x<- multinom(variable ~ income, data = mr_data)   0.03547 *
-mod4x<- multinom(variable ~ employ, data = mr_data)   0.3815** s
-mod5x<- multinom(variable ~ r_amount, data = mr_data) 0.6254  
-mod6x<- multinom(variable ~ gender, data = mr_data)   0.6475
-mod7x<- multinom(variable ~ tot_neg_eval, data = mr_data)  0.727 
-
-mod4<
-## UNIVARIABLE MODEL 
-v<-c("r_type", "exp_all", "income", "employ", "r_amount",
-     "gender", "tot_neg_eval")
-
-univariable <- function(v){
-        
-        tab=NULL
-        LR=NULL
-        
-        for (i in 1:length(v)){
-        
-        tab<-multinom(variable ~v[i], data= mr_data)
-        
-        LR<- Anova(tab)
-        
-        table<- cbind(LR$"LR Chisq", LR$Df, LR$"Pr(>Chisq)")
-        print(table)
-        }
-}
-
-## MODEL FRAME FUNCTION
-#Function that takes a given model an return a table with relevant values, including Likelihood Ratio test. 
 mod_frame <- function(m){
         
         mod<-summary(m)
         n<-length(mod$coefficients[1,])*2
-#Estimate Table values        
+   #Estimate Table values        
         coef<-matrix(rbind(mod$coefficients[1,],
                    mod$coefficients[2,]),n ,1)
         se<-matrix(rbind(mod$standard.errors[1,],
@@ -178,45 +120,97 @@ mod_frame <- function(m){
         coef.name<-matrix(rep(mod$vcoefnames,2),n,1)
         cond<- matrix(cbind(rep(c("1_Friend"),n/2),
                         rep(c("2_Friends"),n/2)),n,1)
-#Build table        
-df<- as.data.frame(cbind(cond, coef.name)) %>% 
-        cbind(round(cbind(coef,se,z,p,odds),3))
-colnames(df)<-c("Condition","Variable","Coeff", "Sd.Error",
-                "z.value", "p.value", "odds")
-print(mod$call)
-print(df)
+   #Build table        
+                df<- as.data.frame(cbind(cond, coef.name)) %>% 
+                cbind(round(cbind(coef,se,z,p,odds),3))
+                colnames(df)<-c("Condition","Variable","Coeff",
+                        "Sd.Error","z.value", "p.value", "odds")
+                print(mod$call)
+                print(df)
 
-#Model doodness of fitness
-fit<-(cbind(r.deviance,AIC))
-colnames(fit)<-c("Residual Deviance","AIC")
-print(fit)
-#Likelihood Ratio Test
-print(Anova(m))
-
+   #Model doodness of fitness
+                fit<-(cbind(r.deviance,AIC))
+                colnames(fit)<-c("Residual Deviance","AIC")
+                print(fit)
+   #Likelihood Ratio Test
+                print(Anova(m))
 }
-
-## MODELS ESTIMATION
-mod_frame(mod1)
-mod_frame(mod2)
-mod_frame(mod3)
 
 ```
 
-### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL
+#1- First Choice preferences 
+
+## 1.3- MULTINOMIAL REGRESSION (nnet package)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE}
+
+library("nnet")# Multinomial regression
+
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all", "gender",
+                   "income", "age", "employ")) 
+
+mr_data<- filter(long_data, value==1)
+mr_data[[3]]=ordered(mr_data[[3]])#as.factor
+
+## MODELS
+mod1<- multinom(variable ~ r_type + exp_all + income + 
+                employ + r_amount + gender + tot_neg_eval
+                ,data = mr_data)
+mod2<-update(mod1, . ~ . - tot_neg_eval)
+mod3<-update(mod2, . ~ . - gender)
+mod4<-update(mod3, . ~ . - r_amount)
+mod5<-update(mod4, . ~ . - employ)
+
+#Additional models
+mod6<-update(mod4, . ~ . - income)
+mod7<-update(mod4, . ~ . - exp_all)
+
+
+mod1x<- multinom(variable ~ r_type, data = mr_data)      #  0.0126 
+mod2x<- multinom(variable ~ exp_all, data = mr_data)     #  0.1136
+mod3x<- multinom(variable ~ income, data = mr_data)      #  0.03547 
+mod4x<- multinom(variable ~ employ, data = mr_data)      #  0.3815 
+mod5x<- multinom(variable ~ r_amount, data = mr_data)    #  0.6254  
+mod6x<- multinom(variable ~ gender, data = mr_data)      #  0.6475
+mod7x<- multinom(variable ~ tot_neg_eval, data = mr_data)#  0.727 
+
+
+                                                  ##Res.Dev.   AIC
+m1<- update(mod5, .~. + r_amount)                 #406.0627 438.0627
+m2<- update(mod5, .~. + tot_neg_eval)             #407.5776 439.5776
+m3<- update(mod5, .~. + gender)                   #407.0715 439.0715
+m4<- update(mod5, .~. + age)                      #407.1102 439.1102
+m5<- update(mod5, .~. + employ)                   #397.2083 445.2083
+m6<- update(mod5, .~. + r_amount*exp_all)         #393.9693 429.9693
+m7<- update(mod5, .~. + r_amount + r_amount*exp_all) # ""      ""
+
+###
+m8<- update(mod5, .~. + r_amount*exp_all-income)  #409.1858 429.1858 
+m9<- update(m6, .~. + r_amount*r_type)            #393.2482 433.2482
+m10<- update(m6, .~. + r_amount*r_type -r_amount) #401.7075 437.7075
+
+
+m11<- update(mod5, .~.  + r_amount*exp_all - r_amount) 
+
+
+```
+
+### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (constant <15)
 ```{r}
 
 v.r_type<-c("Cash", "Product")
 v.exp_all<-c(1:9)
 v.r_amount<-c("£2", "£5")
-v.income<- factor(1:5, levels = c(1:5),
-        labels = c("< 15k", "15k-19k", "20k-29k", "> 30k","No.Ans")) v2.income<- factor(1, levels = c(1),labels = c("< 15k"))
+v.income<- factor(1, levels = c(1),labels = c("< 15k"))
 
-dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v2.income)
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
 colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
 
 
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp, predict(mod5r, newdata = dexp, 
+pp.exp <- cbind(dexp, predict(m8, newdata = dexp, 
                                type = "probs", se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
@@ -230,50 +224,206 @@ head(lpp) # view first few rows
 
 ## plot predicted probabilities across write values for
 ## each level of ses facetted by program type
-ggplot(lpp, aes(x = exp_all, y = probability, colour = r_type)) +
-  geom_line(size=1) +
-  facet_grid(variable ~ r_amount*income, scales="free")
+
+lpp2 <- lpp
+#Change schems labels
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+#Change income label
+levels(lpp2$income)[levels(lpp2$income)=="< 15k"]<- "Income= < 15k"
+
+#Change reward amount label
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
+
+head(lpp2, 3)
 
 
+ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_amount*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Type") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+ 
+```
+
+### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (Constant >30)
+```{r}
+
+v.r_type<-c("Cash", "Product")
+v.exp_all<-c(1:9)
+v.r_amount<-c("£2", "£5")
+v.income<- factor(1, levels = c(1),labels = c("> 30k"))
+
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
+colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
+
+
+## store the predicted probabilities for each value of ses and write
+pp.exp <- cbind(dexp, predict(m6, newdata = dexp, 
+                               type = "probs", se = TRUE))
+
+## calculate the mean probabilities within each level of ses
+by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
+
+## melt data set to long for ggplot2
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type",
+                "income", "r_amount"), value.name = "probability")
+
+head(lpp) # view first few rows
+
+## plot predicted probabilities across write values for
+## each level of ses facetted by program type
+
+lpp2 <- lpp
+#Change schems labels
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+#Change income label
+levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= > 30k"
+
+#Change reward amount label
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
+
+head(lpp2, 3)
+
+
+ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_amount*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Type") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+ 
 ```
 
 
 
+### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (expectations separate)
 
-```{r,echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
+```{r}
+modexp2<- multinom(variable ~ r_type + tot_exp2 + income + 
+                r_amount + r_amount*tot_exp2,data = mr_data)
 
-##1.1- F.C. Ordinal Logistic Regression (MASS package)
+v.r_type<-c("Cash", "Product")
+v.exp_all<-c(1:9)
+v.r_amount<-c("£2", "£5")
+v.income<- factor(1, levels = c(1),labels = c("> 30k"))
 
-library("MASS")# Ordinal logistic regression
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
+colnames(dexp)<-c("r_type", "tot_exp2", "r_amount", "income")
+
+
+## store the predicted probabilities for each value of ses and write
+pp.exp <- cbind(dexp, predict(modexp2, newdata = dexp, 
+                               type = "probs", se = TRUE))
+
+## calculate the mean probabilities within each level of ses
+by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
+
+## melt data set to long for ggplot2
+lpp <- melt(pp.exp, id.vars = c("tot_exp2", "r_type",
+                "income", "r_amount"), value.name = "probability")
+
+head(lpp) # view first few rows
+
+## plot predicted probabilities across write values for
+## each level of ses facetted by program type
+
+lpp2 <- lpp
+#Change schems labels
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+#Change income label
+levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= > 30k"
+
+#Change reward amount label
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
+
+head(lpp2, 3)
+
+
+ggplot(lpp2, aes(x = tot_exp2, y = probability, colour = r_type)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_amount*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Type") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+ 
+```
+
+
+
+## Modelling with income as a rank
+
+```{r}
 
 long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
         id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
-                   "tot_exp1","tot_exp2", "exp_all")) 
+                   "tot_exp1","tot_exp2", "exp_all", "gender",
+                   "income", "age", "employ")) 
 
-olr_data<- filter(long_data, value==1)
+long_data2<- long_data %>% filter(income!="No.Ans") 
+        
+mr_data<- filter(long_data, value==1)
+mr_data[[3]]=ordered(mr_data[[3]])
+mr_data[[9]]=ordered(mr_data[[9]])
+
+## MODELS
+mod1<- multinom(variable ~ r_type + exp_all + income + 
+                employ + r_amount + gender + tot_neg_eval
+                ,data = mr_data)
+mod2<-update(mod1, . ~ . - tot_neg_eval)
+mod3<-update(mod2, . ~ . - gender)
+mod4<-update(mod3, . ~ . - r_amount)
+mod5<-update(mod4, . ~ . - employ)
+
+#Additional models
+mod6<-update(mod4, . ~ . - income)
+mod7<-update(mod4, . ~ . - exp_all)
 
 
-mod <- polr(variable ~ r_type+ r_amount+ exp_all,
-           data = olr_data, Hess=TRUE) # Hess=true, returns 
-#observed information matrix from optimization (called the Hessian) which is used to get standard errors
+mod1x<- multinom(variable ~ r_type, data = mr_data)      #  0.0126 
+mod2x<- multinom(variable ~ exp_all, data = mr_data)     #  0.1136
+mod3x<- multinom(variable ~ income, data = mr_data)      #  0.03547 
+mod4x<- multinom(variable ~ employ, data = mr_data)      #  0.3815 
+mod5x<- multinom(variable ~ r_amount, data = mr_data)    #  0.6254  
+mod6x<- multinom(variable ~ gender, data = mr_data)      #  0.6475
+mod7x<- multinom(variable ~ tot_neg_eval, data = mr_data)#  0.727 
 
-summary(mod)
-ctable <- coef(summary(mod))
-p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
-p<-round(p,3)
-ctable <- cbind(ctable, "p value" = p)
-ctable
 
-mod1 <- polr(variable ~ r_type+ r_amount+ exp_all+ tot_neg_eval,
-           data = olr_data, Hess=TRUE)
-ctable <- coef(summary(mod1))
-p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
-p<-round(p,3)
-ctable <- cbind(ctable, "p value" = p)
-ctable
+                                                  ##Res.Dev.   AIC
+m1<- update(mod5, .~. + r_amount)                 #406.0627 438.0627
+m2<- update(mod5, .~. + tot_neg_eval)             #407.5776 439.5776
+m3<- update(mod5, .~. + gender)                   #407.0715 439.0715
+m4<- update(mod5, .~. + age)                      #407.1102 439.1102
+m5<- update(mod5, .~. + employ)                   #397.2083 445.2083
+m6<- update(mod5, .~. + r_amount*exp_all)         #393.9693 429.9693
+m7<- update(mod5, .~. + r_amount + r_amount*exp_all) # ""      ""
+
+###
+m8<- update(mod5, .~. + r_amount*exp_all-income)  #409.1858 429.1858 
+m9<- update(m6, .~. + r_amount*r_type)            #393.2482 433.2482
+m10<- update(m6, .~. + r_amount*r_type -r_amount) #401.7075 437.7075
+
+
+m11<- update(mod5, .~.  + r_amount*exp_all - r_amount) 
+
+
 
 ```
-
 
 ```{r, echo=FALSE, eval=TRUE, include=FALSE, cache=FALSE}
 ## 1.2- F.C. ORDINAL LOGISTIC REGRESSION (ordinal package)
@@ -299,77 +449,6 @@ summary(mod3)
 
 ```
 
-
-
-## 1.3- MULTINOMIAL REGRESSION (AVRI package)
-
-
-### 1.1- Model Dep. Variable sharing with 2 friends
-```{r, echo=FALSE, eval=TRUE, include=FALSE, cache=FALSE}
-library("MASS")# Ordinal logistic 
-
-long_data<-melt(final_df, measure.var= c("vd_2f"),
-        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
-                   "tot_exp2"))
-
-long_data[[7]]=factor(long_data[[7]])
-
-m1 <- polr(value ~ r_type+ r_amount+ tot_exp1+ tot_exp2,
-           data = long_data, Hess=TRUE)
-ctable <- coef(summary(m1))
-p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
-p<-round(p,3)
-ctable <- cbind(ctable, "p value" = p)
-ctable
-
-### ordinal regresion
-mod <- clm(value ~ r_type+ r_amount+ tot_exp1+ tot_exp2,
-           data = long_data)
-summary(mod)
-
-
-
-### 1.2- Model Dep. Variable sharing with 1 friend
-```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
-
-#library("MASS")# Ordinal logistic regression
-
-long_data<-melt(final_df, measure.var= c("vd_1f"),
-        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
-                   "tot_exp2"))
-
-long_data[[7]]=factor(long_data[[7]])
-
-m2 <- polr(factor(vd_1f) ~ r_type+ r_amount+ tot_exp1+ tot_exp2,
-           data = final_df, Hess=TRUE)
-ctable <- coef(summary(m2))
-p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
-p<-round(p,3)
-ctable <- cbind(ctable, "p value" = p)
-ctable
-
-```
-
-### 1.3- Model Dep. Variable not sharing 
-```{r,echo=FALSE, eval=TRUE, include=FALSE, cache=TRUE}
-
-#library("MASS")# Ordinal logistic regression
-
-long_data<-melt(final_df, measure.var= c("vd_0f"),
-        id.var = c("r_type", "r_amount", "tot_neg_eval", "tot_exp1",
-                   "tot_exp2"))
-
-long_data[[7]]=factor(long_data[[7]])
-
-m3 <- polr(factor(vd_0f) ~ r_type+ r_amount+ tot_exp1+ tot_exp2,
-           data = final_df, Hess=TRUE)
-ctable <- coef(summary(m3))
-p <- as.numeric(pnorm(abs(ctable[,"t value"]), lower.tail= FALSE) *2)
-p<-round(p,3)
-ctable <- cbind(ctable, "p value" = p)
-ctable
-
-```
 
 #1- ORDINAL LOGISTIC REGRESSION
 
