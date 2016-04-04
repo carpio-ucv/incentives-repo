@@ -102,7 +102,7 @@ format(ps, scientific = FALSE)
 
 ```
 
-### 1.3-Expectations about friends reactions and reward AMOUNT.
+### 1.3.a-Expectations about friends reactions and reward AMOUNT.
 Expectations are more negatives when sharing the reward with two friends and when the reward is smaller.
 
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
@@ -119,7 +119,6 @@ ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
         geom_boxplot(size = .75, position="dodge") +
         geom_jitter(alpha = .5)+
         scale_y_continuous(limits =c(0,9.1), breaks=seq(0,9, 0.5))+
-        #coord_cartesian(ylim=c(0, 4.5))+
         scale_fill_brewer(palette="Set1")+
         labs(x="Numbers of Friends to share the reward with", 
                 y="Score-Expectations about friend's reaction")+
@@ -128,6 +127,43 @@ ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()
 ```
+
+### 1.3.b-Expectations about friends reactions and reward AMOUNT (COMPARING SCHEMES).
+Expectations are more negatives when sharing the reward with two friends and when the reward is smaller.
+
+```{r, echo=FALSE, eval=FALSE, include=TRUE, cache=TRUE}
+
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2","vd_0f","vd_1f", "vd_2f" ), 
+         id.var = c("r_type", "r_amount"))
+
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", "2 Friends"))
+names(gdata)[2]<-"Reward"
+
+ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
+        geom_boxplot(size = .75, position="dodge") +
+        geom_jitter(alpha = .5)+
+        scale_y_continuous(limits =c(0,9.1), breaks=seq(0,9, 0.5))+
+        #coord_cartesian(ylim=c(0, 4.5))+
+        scale_fill_brewer(palette="Set1")+
+        labs(x="Numbers of Friends to share the reward with", 
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+
+ggplot(gdata, aes(x=variable, y=value, fill=variable))+
+        geom_boxplot(size = .75, position="dodge") +
+        geom_jitter(alpha = .2)+
+        scale_y_continuous(limits =c(0,9.1), breaks=seq(0,9, 0.5))+
+        scale_fill_brewer(palette="Set1")+
+        facet_grid(~ Reward)+
+        labs(x="Numbers of Friends to share the reward with", 
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+```
+
 
 The next two plots show that the differences in terms of friend's expectations were only observed between REWARD AMOUNT but not in terms of TYPE OF REWARD.
 
@@ -151,7 +187,7 @@ pct$variable <- factor(pct$variable,
 names(pct)[2]<-"Reward"
 
 ggplot(pct, aes(x=value, y=perc, fill=Reward) )+
-        geom_bar(stat="identity",position="dodge",binwidth=1)+
+        geom_bar(stat="identity",position="dodge")+
         ylab("percent") + 
         facet_grid(~ variable)+
         scale_fill_brewer(palette="Set1")+
@@ -206,7 +242,7 @@ pct2$variable <- factor(pct2$variable,
 names(pct2)[2]<-c("Reward")
 
 ggplot(pct2, aes(x=value, y=perc, fill=Reward) )+
-        geom_bar(stat="identity",position="dodge",binwidth=1)+
+        geom_bar(stat="identity",position="dodge")+
         ylab("percent") + 
         facet_grid(~ variable, margins=TRUE)+
         scale_fill_brewer(palette="Set1")+
@@ -237,7 +273,6 @@ ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
         geom_boxplot(size = .75, position="dodge") +
         geom_jitter(alpha = .5)+
         scale_y_continuous(limits =c(0,9.1), breaks=seq(0,9, 0.5))+
-        #coord_cartesian(ylim=c(0, 4.5))+
         scale_fill_brewer(palette="Set1")+
         labs(x="Numbers of Friends to share the reward with", 
                 y="Score-Expectations about friend's reaction")+
@@ -249,7 +284,7 @@ ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
 
 ##3- Expectations about friends' reactions
 
-###3.1-Schemes Ranking and expectation about friends' reactions
+###3.1.a-Schemes Ranking and expectation about friends' reactions
 
 Overall, when expectations about friends' reactions was more negative, people preferred to choose the store were they keep all the reward. 
 
@@ -285,6 +320,53 @@ ggplot(gdata2, aes(x=Group, y=value, fill=factor(Ranking)))+
 
 ***
 The next two plots show that the differences in terms of friend's expectations were only observed between REWARD AMOUNT but not in terms of TYPE OF REWARD.
+
+###3.1.b-Schemes AVERAGE Ranking and expectation about friends' reactions
+
+
+```{r, echo=FALSE, eval=FALSE, include=TRUE, cache=TRUE}
+
+gdata1<-melt(final_df, measure.var= c("tot_exp1","tot_exp2"), id.var = c("vd_0f","vd_1f","vd_2f"))
+
+gdata2<-melt(gdata1, measure.var= c("vd_0f","vd_1f","vd_2f"), id.var = c("value", "variable"))
+
+names(gdata2)[3:4]<-c("Group", "Ranking")
+
+gdata2$Group <- factor(gdata2$Group, labels = 
+                c("0 Ppl.", "1 Pers.", "2 Ppl."))
+gdata2$variable <- factor(gdata2$variable, labels = 
+                c("Expect.Sharing- 1 person", 
+                  "Expect.Sharing- 2 people"))
+
+avg_rank<-gdata2 %>% group_by(variable,Group) %>%
+        summarise(avg=mean(value, Ranking))
+
+ggplot(avg_rank, aes(x=Group, y=avg, fill=factor(variable)))+
+        geom_bar(stat = "identity", position="dodge") +
+        #geom_jitter(alpha = .1)+
+        #scale_y_continuous(limits =c(0.5,9.1), breaks=seq(0.5,9,1))+
+        scale_fill_brewer(palette="Set1", 
+                          guide=guide_legend(title = "Rank"))+
+        facet_grid(~ variable, margins=FALSE)+
+        labs(x="Numbers of Friends to share the reward with", 
+                y="Score-Expectations about friend's reaction")+
+        #guide_legend(title = "Testing")+
+        theme_bw()
+
+ggplot(gdata2, aes(x=Group, y=value, fill=factor(Ranking)))+
+        geom_bar(stat="identity", position="dodge") +
+        #geom_jitter(alpha = .1)+
+        #scale_y_continuous(limits =c(0.5,9.1), breaks=seq(0.5,9,1))+
+        scale_fill_brewer(palette="Set1", 
+                          guide=guide_legend(title = "Rank"))+
+        facet_grid(~ variable, margins=FALSE)+
+        labs(x="Numbers of Friends to share the reward with", 
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+```
 
 
 ###3.2-Schemes Ranking, Type of rewards and expectation about friends reactions when sharing with 2 PEOPLE
@@ -493,7 +575,7 @@ ggplot(avg_rank, aes(x=variable, y=rank, fill=variable) )+
 ggplot(avg_rank, aes(x=income, y=rank, fill=income) )+
         geom_bar(stat="identity",position="dodge")+
         facet_grid(~ variable)+
-        scale_fill_brewer(palette="YIOrRd")+
+        scale_fill_brewer(palette="Set1")+
         theme_bw()+
         labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
 

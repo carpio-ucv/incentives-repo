@@ -68,7 +68,7 @@ final_df<-data_clean %>% mutate(
 #final_df %>% group_by(r_amount) %>% summarise(avg = mean(age))
 
 # Code to audit cases ###################
-# final_df %>% filter(ID==233) %>% gather()
+# final_df %>% filter(ID==315) %>% gather()
 #########################################
 
 ```
@@ -104,11 +104,11 @@ mod_frame <- function(m){
         mod<-summary(m)
         n<-length(mod$coefficients[1,])*2
    #Estimate Table values        
-        coef<-matrix(rbind(mod$coefficients[1,],
+        coef<-matrix(cbind(mod$coefficients[1,],
                    mod$coefficients[2,]),n ,1)
-        se<-matrix(rbind(mod$standard.errors[1,],
+        se<-matrix(cbind(mod$standard.errors[1,],
                  mod$standard.errors[2,]), n,1)
-        z <-matrix(rbind(mod$coefficients[1,]/mod$standard.errors[1,],
+        z <-matrix(cbind(mod$coefficients[1,]/mod$standard.errors[1,],
                          mod$coefficients[2,]/mod$standard.errors[2,]))
         p <-((1 - pnorm(abs(z), 0, 1))*2)
         
@@ -128,7 +128,7 @@ mod_frame <- function(m){
                 print(mod$call)
                 print(df)
 
-   #Model doodness of fitness
+   #Model goodness of fitness
                 fit<-(cbind(r.deviance,AIC))
                 colnames(fit)<-c("Residual Deviance","AIC")
                 print(fit)
@@ -152,7 +152,7 @@ long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
                    "income", "age", "employ")) 
 
 mr_data<- filter(long_data, value==1)
-mr_data[[3]]=ordered(mr_data[[3]])#as.factor
+mr_data[[3]]=ordered(mr_data[[3]])#as.factor #ordered
 
 ## MODELS
 mod1<- multinom(variable ~ r_type + exp_all + income + 
@@ -210,7 +210,7 @@ colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
 
 
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp, predict(m8, newdata = dexp, 
+pp.exp <- cbind(dexp, predict(m7, newdata = dexp, 
                                type = "probs", se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
@@ -296,7 +296,7 @@ head(lpp2, 3)
 
 ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
         geom_line(size=1) +
-        facet_grid(variable ~ r_amount*income, scales="free")+
+        facet_grid(variable ~ r_amount*income)+#, scales="free"
         scale_color_manual(values=c("blue","red"),
                 name="Reward Type") +
         scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
@@ -304,6 +304,61 @@ ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
                 y="Choice probability")
  
 ```
+
+### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (Constant 2 FRIENDS)
+```{r}
+
+v.r_type<-c("Cash", "Product")
+v.exp_all<-c(1:9)
+v.r_amount<-factor(1, levels = c(1),labels = c("£5"))
+v.income<- c("< 15k", "15k-19k","20k-29k", "> 30k", "No.Ans")
+
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
+colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
+
+
+## store the predicted probabilities for each value of ses and write
+pp.exp <- cbind(dexp, predict(m7, newdata = dexp, 
+                               type = "probs", se = TRUE))
+
+## calculate the mean probabilities within each level of ses
+by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
+
+## melt data set to long for ggplot2
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type",
+                "income", "r_amount"), value.name = "probability")
+
+head(lpp) # view first few rows
+
+## plot predicted probabilities across write values for
+## each level of ses facetted by program type
+
+lpp2 <- lpp
+#Change schems labels
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+#Change income label
+levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= > 30k"
+
+#Change reward amount label
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
+
+head(lpp2, 3)
+
+
+ggplot(lpp, aes(x = exp_all, y = probability, colour = variable)) +
+        geom_line(size=1) +
+        facet_grid( income~r_type)+#, scales="free"
+        #scale_color_manual(values=c("blue","red"),
+        #        name="Reward Type") +
+        #scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+ 
+```
+
 
 
 
@@ -316,7 +371,7 @@ modexp2<- multinom(variable ~ r_type + tot_exp2 + income +
 v.r_type<-c("Cash", "Product")
 v.exp_all<-c(1:9)
 v.r_amount<-c("£2", "£5")
-v.income<- factor(1, levels = c(1),labels = c("> 30k"))
+v.income<- factor(1, levels = c(1),labels = c("< 15k"))
 
 dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
 colnames(dexp)<-c("r_type", "tot_exp2", "r_amount", "income")
@@ -344,7 +399,7 @@ levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
 #Change income label
-levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= > 30k"
+levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= < 15k"
 
 #Change reward amount label
 levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
@@ -355,7 +410,7 @@ head(lpp2, 3)
 
 ggplot(lpp2, aes(x = tot_exp2, y = probability, colour = r_type)) +
         geom_line(size=1) +
-        facet_grid(variable ~ r_amount*income, scales="free")+
+        facet_grid(variable ~ r_amount*income)+
         scale_color_manual(values=c("blue","red"),
                 name="Reward Type") +
         scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
@@ -378,7 +433,7 @@ long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
 long_data2<- long_data %>% filter(income!="No.Ans") 
         
 mr_data<- filter(long_data, value==1)
-mr_data[[3]]=ordered(mr_data[[3]])
+mr_data[[3]]=as.factor(mr_data[[3]])#ordered
 mr_data[[9]]=ordered(mr_data[[9]])
 
 ## MODELS
@@ -447,38 +502,5 @@ mod3 <- clm(variable ~ r_type+ r_amount* exp_all + tot_neg_eval,
            data = mr_data, Hess=TRUE)
 summary(mod3)
 
-```
-
-
-#1- ORDINAL LOGISTIC REGRESSION
-
-```{r, echo=FALSE, eval=TRUE, include=FALSE, cache=FALSE}
-library("ordinal")# Ordinal logistic regression
-
-long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
-        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
-                   "tot_exp1","tot_exp2", "exp_all")) 
-
-long_data[[9]]=factor(long_data[[9]])
-
-
-mod <- clm(value ~ r_type+ r_amount + variable,
-           data = long_data)
-
-mod2 <- clm(value ~ r_type+ r_amount + variable + tot_neg_eval,
-           data = long_data)
-
-
-mod3 <- clm(value ~ r_type+ r_amount + variable + tot_neg_eval+
-                    exp_all, data = long_data)
-
-mod4 <- clm(value ~ r_type*variable + tot_neg_eval+ exp_all*r_amount, data = long_data)
-
-mod5 <- clm(value ~ r_type+variable + tot_neg_eval+ variable*r_amount, data = long_data)
-
-
-summary(mod)
-summary(mod2)
-summary(mod3)
 ```
 
