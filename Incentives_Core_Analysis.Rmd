@@ -152,7 +152,7 @@ long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
                    "income", "age", "employ")) 
 
 mr_data<- filter(long_data, value==1)
-mr_data[[3]]=ordered(mr_data[[3]])#as.factor #ordered
+mr_data[[3]]=as.factor(mr_data[[3]])
 
 ## MODELS
 mod1<- multinom(variable ~ r_type + exp_all + income + 
@@ -193,7 +193,7 @@ m10<- update(m6, .~. + r_amount*r_type -r_amount) #401.7075 437.7075
 
 
 m11<- update(mod5, .~.  + r_amount*exp_all - r_amount) 
-
+m12<- update(m6, .~.  + exp_all*r_type) 
 
 ```
 
@@ -210,7 +210,7 @@ colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
 
 
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp, predict(m7, newdata = dexp, 
+pp.exp <- cbind(dexp, predict(m12, newdata = dexp, 
                                type = "probs", se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
@@ -283,7 +283,7 @@ lpp2 <- lpp
 #Change schems labels
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
-levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friends"
 #Change income label
 levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= > 30k"
 
@@ -296,7 +296,7 @@ head(lpp2, 3)
 
 ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
         geom_line(size=1) +
-        facet_grid(variable ~ r_amount*income)+#, scales="free"
+        facet_grid(variable ~ r_amount*income, scales="free")+
         scale_color_manual(values=c("blue","red"),
                 name="Reward Type") +
         scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
@@ -362,30 +362,29 @@ ggplot(lpp, aes(x = exp_all, y = probability, colour = variable)) +
 
 
 
-### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (expectations separate)
+### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (expectations constant)
 
 ```{r}
-modexp2<- multinom(variable ~ r_type + tot_exp2 + income + 
-                r_amount + r_amount*tot_exp2,data = mr_data)
+
 
 v.r_type<-c("Cash", "Product")
-v.exp_all<-c(1:9)
+v.exp_all<-c(7) #average value
 v.r_amount<-c("£2", "£5")
-v.income<- factor(1, levels = c(1),labels = c("< 15k"))
+v.income<- c("< 15k", "15k-19k","20k-29k", "> 30k", "No.Ans")
 
 dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
-colnames(dexp)<-c("r_type", "tot_exp2", "r_amount", "income")
+colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
 
 
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp, predict(modexp2, newdata = dexp, 
+pp.exp <- cbind(dexp, predict(m7, newdata = dexp, 
                                type = "probs", se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
 by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
 
 ## melt data set to long for ggplot2
-lpp <- melt(pp.exp, id.vars = c("tot_exp2", "r_type",
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type",
                 "income", "r_amount"), value.name = "probability")
 
 head(lpp) # view first few rows
@@ -398,8 +397,6 @@ lpp2 <- lpp
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
 levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
-#Change income label
-levels(lpp2$income)[levels(lpp2$income)=="> 30k"]<- "Income= < 15k"
 
 #Change reward amount label
 levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
@@ -408,14 +405,15 @@ levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
 head(lpp2, 3)
 
 
-ggplot(lpp2, aes(x = tot_exp2, y = probability, colour = r_type)) +
-        geom_line(size=1) +
-        facet_grid(variable ~ r_amount*income)+
-        scale_color_manual(values=c("blue","red"),
-                name="Reward Type") +
-        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
-        labs(x="Expectations about friends reactions", 
-                y="Choice probability")
+ggplot(lpp2, aes(x = income, y = probability,
+                colour = r_type, group=r_type)) +
+                geom_line()+
+                geom_point() + 
+                facet_grid(variable ~ r_amount, scales="free")+
+                        scale_color_manual(values=c("blue","red"),
+                        name="Reward Type") +
+                theme(axis.text.x= element_text(angle = 90, hjust = 1))
+                labs(x="Income Category", y="Choice probability")
  
 ```
 
@@ -469,7 +467,8 @@ m6<- update(mod5, .~. + r_amount*exp_all)         #393.9693 429.9693
 m7<- update(mod5, .~. + r_amount + r_amount*exp_all) # ""      ""
 
 ###
-m8<- update(mod5, .~. + r_amount*exp_all-income)  #409.1858 429.1858 
+m8<- update(mod5,.~. +r_amount+r_amount*exp_all-income)
+                                                  #409.1858 429.1858 
 m9<- update(m6, .~. + r_amount*r_type)            #393.2482 433.2482
 m10<- update(m6, .~. + r_amount*r_type -r_amount) #401.7075 437.7075
 
@@ -480,27 +479,119 @@ m11<- update(mod5, .~.  + r_amount*exp_all - r_amount)
 
 ```
 
-```{r, echo=FALSE, eval=TRUE, include=FALSE, cache=FALSE}
-## 1.2- F.C. ORDINAL LOGISTIC REGRESSION (ordinal package)
-library("ordinal")# Ordinal logistic 
-long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
-        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
-                   "tot_exp1","tot_exp2", "exp_all")) 
-
-mr_data<- filter(long_data, value==1)
-
-mod <- clm(variable ~ r_type+ r_amount+ exp_all,
-           data = mr_data, Hess=TRUE)
-summary(mod)
+## REWARD AMOUNT AND EXPECTATIOS SHARING WITH 1 FRIEND
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 
-mod2 <- clm(variable ~ r_type+ r_amount+ exp_all+ tot_neg_eval,
-           data = mr_data, Hess=TRUE)
-summary(mod2)
+low.exp_df<-final_df %>% filter(tot_exp1 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
 
-mod3 <- clm(variable ~ r_type+ r_amount* exp_all + tot_neg_eval,
-           data = mr_data, Hess=TRUE)
-summary(mod3)
+high.exp_df<-final_df %>% filter(tot_exp1 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+
+u.low<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+
+u.high<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
 
 ```
 
+## REWARD AMOUNT AND EXPECTATIOS SHARING WITH 2 FRIENDS (considering rankings)
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+
+low.exp_df<-final_df %>% filter(tot_exp2 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+high.exp_df<-final_df %>% filter(tot_exp2 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+
+u.low.2f<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+
+u.high.2f<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+
+```
+
+
+## Reward Amount and expectations about friends' reactions. 
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+#Median
+final_df %>% select(tot_exp1, tot_exp2, r_amount) %>%
+                group_by(r_amount) %>%
+                summarise(median(tot_exp1),median(tot_exp2), 
+                          mean(tot_exp1),mean(tot_exp2))
+
+
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(31:33)], 
+          function(x) wilcox.test(x ~ final_df[,29], var.equal= FALSE))
+
+
+```
+
+##Scheme rankings and Reward Framing
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+#Median
+final_df %>% select(vd_0f, vd_1f, vd_2f, r_amount) %>%
+                group_by(r_amount) %>%
+                summarise(median(tot_exp1),median(tot_exp2), 
+                          mean(tot_exp1),mean(tot_exp2))
+
+
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(2:4)], 
+          function(x) wilcox.test(x ~ final_df[,30], var.equal= FALSE))
+
+ps<-data.frame(p.value = sapply(u, getElement, name = "p.value"))
+format(ps, scientific = FALSE)
+
+## Plot
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount", "tot_exp1", "tot_exp2"))
+
+exp_df<-data %>% mutate(cat.exp1 = ifelse(tot_exp1 < 4.5, 
+                "Low Expecations","High Expectations"),
+                        cat.exp2 = ifelse(tot_exp2 < 4.5, 
+                "Low Expectations","High Expectations"))
+exp_df$variable <- factor(exp_df$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+# Expectations sharing with one friend
+avg_rank1<-exp_df %>% group_by(variable,r_type, cat.exp1) %>%
+        summarise(rank=mean(value))
+
+ggplot(avg_rank1, aes(x=r_type, y=rank, fill=r_type) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid( cat.exp1~ variable )+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Amount", y="Average Ranking")
+
+
+# Expectations sharing with two friends
+avg_rank2<-exp_df %>% group_by(variable,r_type, cat.exp2) %>%
+        summarise(rank=mean(value))
+
+ggplot(avg_rank2, aes(x=r_type, y=rank, fill=r_type) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid( cat.exp2~ variable )+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Amount", y="Average Ranking")
+
+
+
+
+
+
+```
