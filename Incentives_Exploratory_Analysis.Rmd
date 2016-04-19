@@ -156,7 +156,7 @@ ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
         geom_boxplot(size = .75, position="dodge") +
         scale_y_continuous(limits =c(0,9.5), breaks=seq(0,10,1))+
         scale_fill_brewer(palette="Set1")+
-        labs(x="Numbers of friends with which the reward would be shared",
+        labs(x="Number of friends with which the reward would be shared",
                 y="Score-Expectations about friend's reaction")+
         theme_bw()
 
@@ -271,8 +271,9 @@ exp_df$variable <- factor(exp_df$variable,
 # Expectations sharing with one friend
 avg_rank1<-exp_df %>% group_by(variable,r_amount, cat.exp1) %>%
         summarise(rank=mean(value))
+names(avg_rank1)[2]<-c("Amount")
 
-ggplot(avg_rank1, aes(x=r_amount, y=rank, fill=r_amount) )+
+ggplot(avg_rank1, aes(x=Amount, y=rank, fill=Amount) )+
         geom_bar(stat="identity",position="dodge")+
         facet_grid( cat.exp1~ variable )+
         scale_fill_brewer(palette="Set1")+
@@ -284,8 +285,9 @@ ggplot(avg_rank1, aes(x=r_amount, y=rank, fill=r_amount) )+
 # Expectations sharing with two friends
 avg_rank2<-exp_df %>% group_by(variable,r_amount, cat.exp2) %>%
         summarise(rank=mean(value))
+names(avg_rank2)[2]<-c("Amount")
 
-ggplot(avg_rank2, aes(x=r_amount, y=rank, fill=r_amount) )+
+ggplot(avg_rank2, aes(x=Amount, y=rank, fill=Amount) )+
         geom_bar(stat="identity",position="dodge")+
         facet_grid( cat.exp2~ variable )+
         scale_fill_brewer(palette="Set1")+
@@ -356,12 +358,14 @@ ggplot(pct2, aes(x=value, y=perc, fill=Reward) )+
 
 ```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
-g2data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+gdata<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
          id.var = c("r_type", "r_amount"))
 
-avg_rank<-g2data %>% group_by(variable,r_type) %>%
+avg_rank<-gdata %>% group_by(variable,r_type) %>%
         summarise(rank=mean(value))
-avg_rank2<-g2data %>% group_by(variable,r_type, r_amount) %>%
+
+
+avg_rank2<-gdata %>% group_by(variable,r_type, r_amount) %>%
         summarise(rank=mean(value))
 
 ggplot(avg_rank, aes(x=r_type, y=rank, fill=r_type) )+
@@ -371,12 +375,22 @@ ggplot(avg_rank, aes(x=r_type, y=rank, fill=r_type) )+
         theme_bw()+
         labs(x="Reward Type", y="Average Ranking")
 
+#amount * Type
 ggplot(avg_rank2, aes(x=r_type, y=rank, fill=r_type) )+
         geom_bar(stat="identity",position="dodge")+
         facet_grid(variable ~ r_amount)+
         scale_fill_brewer(palette="Set1")+
         theme_bw()+
         labs(x="Reward Type", y="Average Ranking")
+
+
+ggplot(avg_rank2, aes(x=r_amount, y=rank, fill=r_amount) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(variable ~ r_type)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Reward Type", y="Average Ranking")
+
 
 #dev.copy(jpeg,"figures/prueba2.jpeg")
 #dev.off()

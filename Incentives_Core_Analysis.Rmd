@@ -535,14 +535,34 @@ u<-lapply(final_df[,c(31:33)],
 
 ```
 
+## PLOT REWARD AMOUNT AND EXPECTATIOS FRIENDS REACTIONS
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
+         id.var = c("r_type", "r_amount"))
+
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", 
+                          "2 Friends"))
+names(gdata)[2]<-"Reward"
+
+
+ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9,1))+
+        scale_fill_brewer(palette="Set1")+
+        labs(x="Number of friends with which the reward would be shared",
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+```
+
+
 ##Scheme rankings and Reward Framing
 ```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
-#Median
-final_df %>% select(vd_0f, vd_1f, vd_2f, r_amount) %>%
-                group_by(r_amount) %>%
-                summarise(median(tot_exp1),median(tot_exp2), 
-                          mean(tot_exp1),mean(tot_exp2))
+#Means
+final_df %>% select(vd_0f, vd_1f, vd_2f, r_type) %>%
+                group_by(r_type) %>%
+                summarise(mean(vd_0f),mean(vd_1f),mean(vd_2f))                  
 
 
 # Mann Whitney U-Test
@@ -557,6 +577,21 @@ format(ps, scientific = FALSE)
 data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
          id.var = c("r_type", "r_amount", "tot_exp1", "tot_exp2"))
 
+avg_rank<-data %>% group_by(variable,r_type) %>%
+        summarise(rank=mean(value))
+
+avg_rank$variable <- factor(avg_rank$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_rank)[2]<-c("Framing")
+
+ggplot(avg_rank, aes(x=Framing, y=rank, fill=Framing) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Framing", y="Average Ranking")
+######
 exp_df<-data %>% mutate(cat.exp1 = ifelse(tot_exp1 < 4.5, 
                 "Low Expecations","High Expectations"),
                         cat.exp2 = ifelse(tot_exp2 < 4.5, 
@@ -567,8 +602,9 @@ exp_df$variable <- factor(exp_df$variable,
 # Expectations sharing with one friend
 avg_rank1<-exp_df %>% group_by(variable,r_type, cat.exp1) %>%
         summarise(rank=mean(value))
+names(avg_rank1)[2]<-c("Framing")
 
-ggplot(avg_rank1, aes(x=r_type, y=rank, fill=r_type) )+
+ggplot(avg_rank1, aes(x=Framing, y=rank, fill=Framing) )+
         geom_bar(stat="identity",position="dodge")+
         facet_grid( cat.exp1~ variable )+
         scale_fill_brewer(palette="Set1")+
@@ -576,12 +612,12 @@ ggplot(avg_rank1, aes(x=r_type, y=rank, fill=r_type) )+
         theme_bw()+
         labs(x="Reward Amount", y="Average Ranking")
 
-
 # Expectations sharing with two friends
 avg_rank2<-exp_df %>% group_by(variable,r_type, cat.exp2) %>%
         summarise(rank=mean(value))
+names(avg_rank2)[2]<-c("Framing")
 
-ggplot(avg_rank2, aes(x=r_type, y=rank, fill=r_type) )+
+ggplot(avg_rank2, aes(x=Framing, y=rank, fill=Framing) )+
         geom_bar(stat="identity",position="dodge")+
         facet_grid( cat.exp2~ variable )+
         scale_fill_brewer(palette="Set1")+
@@ -590,8 +626,82 @@ ggplot(avg_rank2, aes(x=r_type, y=rank, fill=r_type) )+
         labs(x="Reward Amount", y="Average Ranking")
 
 
+```
+
+## REWARD framing (type) AND EXPECTATIOS SHARING WITH 1 FRIEND
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
 
 
+low.exp_df<-final_df %>% filter(tot_exp1 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
 
+high.exp_df<-final_df %>% filter(tot_exp1 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+
+u.low.1f<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+
+u.high.1f<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+
+```
+
+
+## REWARD FRAMING (TYPE) AND EXPECTATIOS SHARING WITH 2 FRIENDS (considering rankings)
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+
+low.exp_df<-final_df %>% filter(tot_exp2 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+high.exp_df<-final_df %>% filter(tot_exp2 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+
+u.low.2f<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+
+u.high.2f<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+
+```
+
+## Reward Framing and expectations about friends' reactions. 
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+#Median
+final_df %>% select(tot_exp1, tot_exp2, r_type) %>%
+                group_by(r_type) %>%
+                summarise(median(tot_exp1),median(tot_exp2), 
+                          mean(tot_exp1),mean(tot_exp2))
+
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(31:33)], 
+          function(x) wilcox.test(x ~ final_df[,30], var.equal= FALSE))
+ps<-data.frame(p.value = sapply(u, getElement, name = "p.value"))
+format(ps, scientific = FALSE)
+
+```
+
+
+## PLOT REWARD FRAMING AND EXPECTATIOS FRIENDS REACTIONS
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
+         id.var = c("r_type", "r_amount"))
+
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", 
+                          "2 Friends"))
+names(gdata)[1]<-"Framing"
+
+
+ggplot(gdata, aes(x=variable, y=value, fill=Framing))+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9,1))+
+        scale_fill_brewer(palette="Set1")+
+        labs(x="Number of friends with which the reward would be shared",
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
 
 ```
