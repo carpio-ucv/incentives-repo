@@ -705,3 +705,142 @@ ggplot(gdata, aes(x=variable, y=value, fill=Framing))+
         theme_bw()
 
 ```
+
+
+### INTERACTION TYPE OF REWARD * REWARD AMOUNT
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+gdata<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount"))
+
+avg_rank<-gdata %>% group_by(variable,r_type, r_amount) %>%
+        summarise(rank=mean(value))
+
+avg_rank$variable <- factor(avg_rank$variable,
+                     labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_rank)[2]<-"Framing"
+names(avg_rank)[3]<-"Amount"
+
+#amount * Type
+
+ggplot(avg_rank, aes(x=Amount, y=rank, fill=Amount) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(variable ~ Framing)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 1))+
+        labs(x="Reward Framing", y="Average Ranking")
+
+
+#dev.copy(jpeg,"figures/prueba2.jpeg")
+#dev.off()
+
+```
+
+## FEARS OF NEGATIVE EVALUATIONS
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+
+# Mann Whitney U-Test Reward Amount
+t.test(final_df[,34] ~ final_df[,29], var.equal= FALSE)
+# Mann Whitney U-Test Reward Type
+t.test(final_df[,34] ~ final_df[,30], var.equal= FALSE)
+# Mann Whitney U-Test Gender
+t.test(final_df[,34] ~ final_df[,25], var.equal= FALSE)
+
+#Correlation
+rcorr(final_df[,34], final_df[,27], type="pearson")  
+```
+
+### 4.2 Fears of negatives evaluations, AGE and GENDER
+Younger people and Females have a tendency to have higher fears of Negative Evaluations. 
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+
+ggplot(final_df, aes(x=tot_neg_eval, y=age, color=gender)) +
+        geom_point(shape=16, size = I(5), alpha = I(0.5)) +
+        scale_color_manual(values=c('blue','red'))+
+        geom_smooth(method=lm,size=2, se=FALSE) +
+        labs(x="Scale - Fears of Negative Evaluations", y="Age")+
+        scale_y_continuous(limits =c(10,90), breaks=seq(10,90,10))+
+        theme_bw()
+
+```
+
+### EXPECTATIONS ABOUT FRIENDS IN GENERAL
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2"), 
+         id.var = c("gender"))
+
+#Median and Mean per number of friends
+gdata %>% group_by(variable) %>%
+        summarise(median(value),mean(value))
+
+#Median and Mean per Gender
+gdata %>% group_by(gender) %>%
+        summarise(median(value),mean(value))
+
+
+# Mann Whitney between number of friends
+wilcox.test(gdata[,3] ~ gdata[,2], var.equal= FALSE)
+
+# Mann Whitney between GENDER
+
+lapply(final_df[,c(31:32)], 
+          function(x) wilcox.test(x ~ final_df[,25], var.equal= FALSE))
+
+
+##PLOT
+gdata$variable <- factor(gdata$variable, 
+                     labels = c("Exp. Sharing with 1 Friend", 
+                                "Exp. Sharing with 2 Friends"))
+names(gdata)[1]<-"Gender"
+
+ggplot(gdata, aes(x=Gender, y=value, fill=Gender) )+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        facet_grid(. ~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        coord_cartesian(ylim=c(0, 8.5))+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9, 1))+
+        labs(x="Gender", 
+             y="Score-Expectations about friends' reactions")
+
+
+```
+
+### INCOME AND RANKINGS
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+# Mann Whitney between income categories
+
+lapply(final_df[,c(2:4)], 
+          function(x) kruskal.test(x~ final_df[,26]))
+
+
+#PLOT
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("income"))
+
+avg_rank<-data %>% group_by(variable,income) %>%
+        summarise(rank=mean(value))
+
+avg_rank$variable <- factor(avg_rank$variable,
+                     labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_rank)[2]<-"Income"
+
+ggplot(avg_rank, aes(x=Income, y=rank, fill=Income) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+
+        labs(x="Income Category", y="Average Ranking")
+
+```
+
