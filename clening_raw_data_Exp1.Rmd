@@ -1,0 +1,75 @@
+---
+title: "Clening Raw Data Experiment 1"
+author: "Juan Carpio"
+output: html_document
+---
+
+## Setting directory and relevant library
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+#Opening relevant library
+library("dplyr")
+
+## Change working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+```
+
+
+## Reading and cleaning data set
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+## read raw_data
+df<-read.csv("raw_data_Exp1.csv", na.strings=c("NA"), stringsAsFactors=FALSE)
+data<- df %>% filter(V10=="1")# select valid cases
+
+
+# store and validate total number of participants
+n<-length(data[,1])
+n
+
+## Name variables
+variables<-c("gender", "age", "employment", "income", "keep", 
+             "share")
+
+#Separate Groups
+g1<- data %>% select(Gender, Age, Empl., Q17, Q11_1, Q11_2) %>%
+        filter(Q11_1!="")
+colnames(g1)<-variables
+
+g2<- data %>% select(Gender, Age, Empl., Q17, Q27_1, Q27_2) %>%
+        filter(Q27_1!="")
+colnames(g2)<-variables
+
+g3<- data %>% select(Gender, Age, Empl., Q17, Q30_1, Q30_2) %>%
+        filter(Q30_1!="")
+colnames(g3)<-variables
+
+
+#Building final data set
+gr_data<- rbind(g1,g2,g3)
+gr_data[is.na(gr_data)] <- 0
+tidy<-apply(gr_data, 2, as.numeric)
+
+# Defining Length of each group
+l1<- nrow(g1)
+l2<- nrow(g2)
+l3<- nrow(g3)
+
+# Create vector defining each experimental condition
+cond_length<-c(l1,l2,l3)
+condition<- rep.int(c(1:3), times= cond_length)
+
+# Joining data with groups information
+clean<-cbind(tidy, condition)
+
+# Create CSV File with clean data
+write.csv(clean, file="clean_data_exp1.csv")
+
+```
+
+##Sample dataset
+```{r, echo=TRUE}
+head(clean)
+```
+

@@ -6,7 +6,7 @@ output: html_document
 ---
 
 
-```{r,echo=TRUE, eval=TRUE, include=FALSE, cache=FALSE}
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
 # Reading Clean File and setting relevant libraries.
 
 ## Change working directory
@@ -210,7 +210,7 @@ colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
 
 
 ## store the predicted probabilities for each value of ses and write
-pp.exp <- cbind(dexp, predict(m12, newdata = dexp, 
+pp.exp <- cbind(dexp, predict(m6, newdata = dexp, 
                                type = "probs", se = TRUE))
 
 ## calculate the mean probabilities within each level of ses
@@ -244,10 +244,20 @@ ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
         geom_line(size=1) +
         facet_grid(variable ~ r_amount*income, scales="free")+
         scale_color_manual(values=c("blue","red"),
-                name="Reward Type") +
+                name="Reward Framing") +
         scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
         labs(x="Expectations about friends reactions", 
                 y="Choice probability")
+
+ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_amount)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_type*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Amount") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+
  
 ```
 
@@ -303,6 +313,16 @@ ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
         labs(x="Expectations about friends reactions", 
                 y="Choice probability")
  
+
+ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_amount)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_type*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Type") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+
 ```
 
 ### PROBABILITY PLOT OF THE BEST PREDICTIVE MODEL (Constant 2 FRIENDS)
@@ -684,6 +704,26 @@ format(ps, scientific = FALSE)
 
 ```
 
+## Reward Framing and expectations about friends' reactions 
+## BY SCHEME
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+exp_df<-final_df %>% select(vd_0f, vd_1f, vd_2f, r_type)
+
+#Median
+final_df %>% select(tot_exp1, tot_exp2, r_type) %>%
+                group_by(r_type) %>%
+                summarise(median(tot_exp1),median(tot_exp2), 
+                          mean(tot_exp1),mean(tot_exp2))
+
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(31:33)], 
+          function(x) wilcox.test(x ~ final_df[,30], var.equal= FALSE))
+ps<-data.frame(p.value = sapply(u, getElement, name = "p.value"))
+format(ps, scientific = FALSE)
+
+```
+
 
 ## PLOT REWARD FRAMING AND EXPECTATIOS FRIENDS REACTIONS
 ```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
@@ -703,6 +743,47 @@ ggplot(gdata, aes(x=variable, y=value, fill=Framing))+
         labs(x="Number of friends with which the reward would be shared",
                 y="Score-Expectations about friend's reaction")+
         theme_bw()
+###### REWARD FRAMING AND EXPECTATIOS FRIENDS REACTIONS BY SCHEME
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type","r_amount", "tot_exp1", "tot_exp2", "ID"))
+
+
+avg_exp<-data %>% filter(value==1) %>% group_by(variable,r_amount) %>%
+        summarise(exp=mean(tot_exp2))
+
+
+avg_exp$variable <- factor(avg_exp$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_exp)[2]<-c("Framing")
+
+ggplot(avg_exp, aes(x=Framing, y=exp, fill=Framing) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9, 1))+
+        theme_bw()+
+        labs(x="Reward Framing", y="Average Expectations Score")
+
+###### REWARD FRAMING AND EXPECTATIOS FRIENDS REACTIONS BY SCHEME 
+## CORRELATION
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type","r_amount", "tot_exp1", "tot_exp2", "ID"))
+
+
+avg_exp<-data %>% group_by(variable,r_type, value) %>%
+        summarise(exp1=mean(tot_exp1), exp2=mean(tot_exp2))
+
+
+ggplot(avg_exp, aes(x=value, y=exp2, fill=r_type, color= r_type))+
+        geom_point(stat="identity")+ geom_line()+
+        facet_grid(~ variable)+
+        #scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(6,8.5), breaks=seq(0,9, 1))+
+        theme_bw()+
+        labs(x="Reward Framing", y="Average Expectations Score")
+
 
 ```
 
@@ -842,5 +923,80 @@ ggplot(avg_rank, aes(x=Income, y=rank, fill=Income) )+
         theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+
         labs(x="Income Category", y="Average Ranking")
 
+
+
+#PLOT extra 
+data<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2"), 
+         id.var = c("income"))
+
+
+data$variable <- factor(data$variable,
+                     labels = c("Exp. Sharing with 1 Friend", 
+                                "Exp. Sharing with 2 Friends"))
+names(avg_rank)[2]<-"Income"
+
+ggplot(data, aes(x=income, y=value, fill=income) )+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+
+        #scale_y_continuous(limits =c(0,6), breaks=seq(0,6, 1))+
+        labs(x="Income Category", y="Expectations about friends' reactions")
+
+## extra correl
+data<- final_df %>% select(vd_0f,vd_1f,vd_2f,tot_exp1,tot_exp2,income)                 %>% filter(income!="No.Ans") %>% 
+        melt(measure.var= c("vd_0f","vd_1f","vd_2f"), 
+         id.var = c("income","tot_exp1","tot_exp2")) %>%
+        filter(value==1) %>%
+        melt(measure.var= c("tot_exp1","tot_exp2"), 
+         id.var = c("income", "variable")) 
+
+        
+
+names(data) <- c("income", "scheme", "exp.cat", "exp.value")
+
+data$income <- as.numeric(data$income)
+
+
+ggplot(data, aes(income, expect.value))+
+        geom_smooth(method = "glm")  + geom_point() +
+        facet_grid(scheme ~ expec.cat) 
+###
+
+# Calculate correlation for each group
+ddply(data, c("exp.cat","scheme"), summarise, cor = round(cor(income, exp.value, method="spearman"), 4))
+
+ddply(data, c("exp.cat","scheme"), summarise, p = round(cor.test(income, exp.value, method="spearman")$p.value,4))
+
+```
+
+
+### MEDIATION ANALYSIS
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+mediation1<-lm(tot_neg_eval~tot_exp1, data = mr_data)
+mediation2<-lm(tot_neg_eval~tot_exp2, data = mr_data)
+summary (mediation1)
+summary (mediation2)
+```
+
+##ALPHA
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+# install.packages("psych")
+library("psych")
+
+f1<-final_df %>% select(exp_x1_K, exp_x1_T, exp_x1_S.R, exp_x1_G) 
+alpha(as.data.frame(f1))
+
+f2<-final_df %>% select(exp_x2_K, exp_x2_T, exp_x2_S.R, exp_x2_G) 
+alpha(as.data.frame(f2))
+
+fne<- final_df %>% 
+                select(neg.ev_1,neg.ev_2.R,neg.ev_3,
+                neg.ev_4.R,neg.ev_5,neg.ev_6,neg.ev_7.R,
+                neg.ev_8,neg.ev_9,neg.ev_10.R,neg.ev_11, neg.ev_12)
+alpha(as.data.frame(fne))
 ```
 

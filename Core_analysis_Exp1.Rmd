@@ -1,0 +1,115 @@
+---
+title: "Core Analysis Experiment 1"
+author: "Juan Carpio"
+output: html_document
+---
+
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+
+## Set working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("dplyr")
+library("tidyr")
+library("ggplot2")
+library("descr")
+library("scales", lib.loc="~/R/win-library/3.2")
+
+## read raw_data
+data_clean<-read.csv("clean_data_exp1.csv")
+
+## Changing NAs by ceros. 
+data_clean$share[is.na(data_clean$share)] <- 0
+
+```
+
+## Defining data frame relevant factors
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+data_clean$condition <- factor(data_clean$condition, levels = c(1:3),
+                      labels = c("No-Reciprocity","Reciprocity",
+                                 "No-Awareness"))
+data_clean$gender <- factor(data_clean$gender, levels = c(2,1),
+                      labels = c("Female","Male"))
+```
+
+
+## Exploratoty measures
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+## Average Age
+summarise(data_clean, avg = mean(age))
+
+## Total cases per gender
+data_clean %>% group_by(gender) %>% count(gender)
+
+## Total cases per condition
+data_clean %>% group_by(condition) %>% count(condition)
+
+## Median per Condition
+data_clean %>% group_by(condition) %>% summarise(md=median(share))
+
+## Average per Condition
+data_clean %>% group_by(condition) %>% summarise(me=mean(share))
+
+```
+
+
+## Comparison between conditions regarding the willigness to share the reward 
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+## Average Age
+kruskal.test(data=data_clean, share ~ condition)
+
+```
+
+
+
+## Plots comparing conditions (Figure 2 AND Figure 3)
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+# FIGURE 2
+
+## Creating 5 equal categories
+categ<-cut(data_clean$share, c(-1, .2,.4,.6,.8,1))
+## Subtotals per condition 
+data.cat <- cbind(data_clean, categ) %>% group_by(condition, categ) %>%
+        count(categ, condition)
+## Subtotals per category        
+ncat<- data.cat %>% group_by(condition) %>% summarise(ncat=sum(n))
+# Data frame for plot
+data.plot<-left_join(data.cat, ncat, by="condition")
+head(data.plot)
+names(data.plot)[2]<-"Condition"
+
+#PLot
+ggplot(data.plot, aes(categ, y=n/ncat,fill=Condition))+
+        geom_bar(stat = "identity",position="dodge")+
+        scale_y_continuous(limits =c(0,.45), breaks=seq(0,.45,.05),
+                           labels = percent)+
+        scale_x_discrete(labels = c("0%-20%", "21%-40%", "41%-60%"
+                                    ,"61%-80%","81%-100%"))+
+        scale_fill_brewer(palette="Set1") +
+        labs(x="Proportion of the reward willing to share",
+        y="% of Selection per Condition") +
+        theme_bw()
+
+
+# FIGURE 3
+
+names(data_clean)[8]<-"Condition"
+ggplot(data_clean, aes(share, colour=Condition))+
+        geom_line(stat="ecdf", size=1.5)+
+        scale_y_continuous(limits =c(.1,1), breaks=seq(.1,1,.10),
+                           labels = percent)+
+        scale_x_continuous(limits =c(0,1), breaks=seq(0,1,.1),
+                           labels = percent)+
+        scale_colour_brewer(palette="Set1") +
+        labs(x="Proportion of the reward willing to share",
+        y="Cumulative Percentage") +
+        theme_bw()
+
+```
