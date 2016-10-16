@@ -1,0 +1,7 @@
+name: Publish Document
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/213253/85a4052245e3431992e7ce6b3b3e7187
+bundleId: https://api.rpubs.com/api/v1/document/213253/85a4052245e3431992e7ce6b3b3e7187
+url: http://rpubs.com/carpio_ucv/213253
+when: 1475096669.85687

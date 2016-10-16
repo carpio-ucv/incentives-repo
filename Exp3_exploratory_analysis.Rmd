@@ -1,0 +1,148 @@
+---
+title: "Exploratory Analysis Experiment 3"
+author: "Juan Carpio"
+output: html_document
+---
+
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+
+## Set working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("dplyr")
+library("reshape2")
+library("tidyr")
+library("ggplot2")
+library("descr")
+library("scales", lib.loc="~/R/win-library/3.2")
+
+## read raw_data
+data_clean<-read.csv("clean_data_exp3.csv")
+
+```
+
+# Satatge 1 - Experiment 3
+
+## Preparing data frame for analysis
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+##Factors definition
+data_clean$gender <- factor(data_clean$gender, levels = c(2,1),
+                      labels = c("Female","Male"))
+
+
+## Summary of schemes' selection in Stage 1
+p50.p1<-rowSums(data_clean[,6:20] == 1)
+p50.p2<-rowSums(data_clean[,6:20] == 2)
+p70.p1<-rowSums(data_clean[,6:20] == 3)
+p70.p2<-rowSums(data_clean[,6:20] == 4)
+p90.p1<-rowSums(data_clean[,6:20] == 5)
+p90.p2<-rowSums(data_clean[,6:20] == 6)
+
+df_st<- data_clean %>% select(condition) %>%
+        mutate(p50.p1=p50.p1, p50.p2=p50.p2,
+               p70.p1=p70.p1, p70.p2=p70.p2,
+               p90.p1=p90.p1, p90.p2=p90.p2) %>%
+        melt(id.vars="condition", value.name="Fr",
+             variable.name="Scheme")
+# Sample Data Frame
+head(df_st)
+
+```
+
+
+## Plot comparing conditions - Statge 1 (Figure 10)
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+## Summarise choice frequency per scheme
+sch<-df_st %>% group_by(condition,Scheme) %>% summarise(Fr=sum(Fr))
+## Subtotals per category        
+ncat<- sch %>% group_by(condition) %>% summarise(ncat=sum(Fr))
+
+## Final gata frame for plot
+
+data.plot<-left_join(sch, ncat, by="condition") %>%
+        mutate(rew=rep(c(1:3),each=2,4,len=6),
+               frnd=rep(c(1:2),each=1,3))
+
+data.plot$frnd <- factor(data.plot$frnd, levels = c(1:2),
+                      labels = c("1 Friend","2 Friends"))
+data.plot$rew <- factor(data.plot$rew, levels = c(1:3),
+                      labels = c("Reward shared=50%",
+                        "Reward shared=30%","Reward shared=10%"))
+data.plot$condition <- factor(data.plot$condition, levels = c(1:3),
+                      labels = c("No-Reciprocity","Reciprocity",
+                                 "No-Awareness"))
+head(data.plot)
+## Legend in uppercase
+names(data.plot)[1]<-"Condition"
+
+##PLot
+ggplot(data.plot, aes(frnd, y=Fr/ncat, group=Condition,
+                       fill=Condition))+
+        geom_bar(stat = "identity", position= "dodge")+
+        facet_grid(~rew)+
+        scale_y_continuous(limits =c(0,.25), breaks=seq(0,.25,.05),
+                           labels = percent)+
+        scale_x_discrete(labels = c("1 Friend", "2 Friends"))+
+        scale_fill_brewer(palette="Set1") +
+        labs(x="Characteristics of the Incentive Scheme",
+        y="Proportion of selection") +
+        theme_bw()
+```
+
+# Satatge 2 - Experiment 3
+
+## Preparing data frame for analysis
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+## Summary of schemes' selection in Stage 2
+sch50.p1<-sum(data_clean[,12] == 1)
+sch50.p2<-sum(data_clean[,12] == 2)
+sch70.p1<-sum(data_clean[,15] == 3)
+sch70.p2<-sum(data_clean[,15] == 4)
+sch90.p1<-sum(data_clean[,13] == 5)
+sch90.p2<-sum(data_clean[,13] == 6)
+
+
+df_st.2<- rbind(sch50.p1, sch50.p2, sch70.p1,sch70.p2,
+                sch90.p1, sch90.p2) %>%
+                as.data.frame() %>%
+        mutate(frnd=rep(c(1:2),3), rew=rep(c(1:3),each=2))        
+# Sample Data Frame
+head(df_st.2)
+
+```
+
+## Plot comparing conditions- Statge 2 (Figure 11)
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+head(df_st.2,2)
+
+## Subtotals per category        
+ncat<- df_st.2 %>% group_by(rew) %>% summarise(Fr=sum(V1))
+head(ncat)## n=227
+
+df_st.2$frnd <- factor(df_st.2$frnd, levels = c(1:2),
+                      labels = c("1 Friend","2 Friends"))
+df_st.2$rew <- factor(df_st.2$rew, levels = c(1:3),
+                      labels = c("Reward shared=50%",
+                        "Reward shared=30%","Reward shared=10%"))
+
+## Legend in uppercase
+names(data.plot)[1]<-"Condition"
+
+##PLot
+ggplot(df_st.2, aes(rew, y=V1/227, colour=frnd, group=frnd))+
+        geom_point(size=5)+ geom_line(size=1.5)+
+        scale_y_continuous(limits =c(0.15,.8), breaks=seq(0,.8,.1),
+                           labels = percent)+
+        scale_colour_brewer(palette="Set1", name="No. of Friends") +
+        labs(x="Proportion of the reward being shared",
+        y="Proportion of selection") +
+        theme_bw()
+```

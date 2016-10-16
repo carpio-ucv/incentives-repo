@@ -1,0 +1,135 @@
+---
+title: "Choices Modelling - Experiment 3"
+author: "Juan Carpio"
+output: html_document
+---
+
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+
+## Set working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("prefmod", lib.loc="~/R/win-library/3.2")
+library("dplyr")
+library("reshape2")
+library("tidyr")
+library("ggplot2")
+```
+
+## Preparing Data Frame
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+exp <- read.csv("btlexp3.csv")
+exp3 <- llbt.design(exp, nitems = 6, cat.scovs = "cond")
+gr <- factor(exp3$cond)
+names(exp3)[5:10] <- c("GIFT50x1", "GIFT25x2", "GIFT30x1", "GIFT15x2",
+                      "GIFT10x1", "GIFT5x2")
+head(exp3)
+```
+
+# Choices Modelling
+
+## Model Incorporatin Experimental Condition (Group) only.
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+## General Model (GNM)
+res <- gnm(formula = y ~ GIFT10x1 + GIFT5x2+ GIFT30x1 + GIFT15x2 +
+                   + GIFT25x2 + GIFT50x1, eliminate = mu:cond, 
+                family = poisson, data = exp3)
+summary(res)
+1-pchisq(res$deviance, df= res$df)
+
+## Model Including Groups Interaction - (Table 10) 
+resgr <- gnm(formula = y ~ GIFT10x1 + GIFT5x2+ GIFT30x1 + GIFT15x2 +
+                + GIFT25x2 + GIFT50x1+(GIFT10x1 + GIFT5x2+ GIFT30x1 
+                + GIFT15x2 +GIFT25x2 + GIFT50x1):cond, 
+             eliminate = mu:cond, family = poisson, data = exp3)
+summary(resgr)
+1-pchisq(resgr$deviance, df= resgr$df)
+
+# Models Comparison (ANOVA - Table 8)
+anova(res,resgr, test = "Chisq")
+
+
+## Coefficients
+
+### No Reciprocity Condition
+coefg2 <- resgr$coefficients [1:6] + resgr$coefficients [c(7,9,11,13,15,17)]
+coefg2
+### Reciprocity Condition
+coefg3 <- resgr$coefficients [1:6] + resgr$coefficients [c(8,10,12,14,16,18)]
+coefg3
+
+```
+
+
+## Model Incorporatin Experimental Condition (Group) 
+## and the Reward Split as a Covariate.
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+## General Model (GNM)
+COV <- data.frame(split = c(0, 1, 0, 1, 0, 1), 
+                   share = c(50, 50, 20, 20, 10, 10))
+
+exp3b <- llbt.design(exp, nitems = 6,  objcov= COV, cat.scovs = "cond")
+names(exp3b)[5:10] <- c("GIFT50x1", "GIFT25x2", "GIFT30x1", "GIFT15x2",
+                        "GIFT10x1", "GIFT5x2")
+
+## Model 1 (No Interactions)
+resobj1 <- gnm(formula = y ~ split+ share,
+              eliminate = mu, family = poisson, data = exp3b)
+summary(resobj1)
+1-pchisq(resobj1$deviance, df= resobj1$df)
+
+##Model 2 (Considering Interactions) - FINAL MODEL
+resobj2 <- gnm(formula = y ~  split + share + split:cond + share:cond,
+              eliminate = mu:cond, family = poisson, data = exp3b)
+summary(resobj2)
+1-pchisq(resobj2$deviance, df= resobj2$df)
+
+## Model Comparison (Table 9)
+anova(resgr,resobj2, test = "Chisq")
+
+```
+
+
+## Worth Parameters
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE}
+
+## WORTH parameters 
+
+### Control- No Awareness)
+resgr$coefficients[c(6)] <- 0
+worth1 <- round(exp(2 * resgr$coefficients[1:6])/(sum(exp(2 *
+                        resgr$coefficients[1:6]))), digits = 5)
+print(worth1)
+
+### NO Reciprocity
+coefg2[c(6)] <- 0
+worth2 <- round(exp(2 * coefg2[1:6])/(sum(exp(2 * coefg2[1:6]))), digits = 5)
+print(worth2)
+
+### Reciprocity
+coefg3[c(6)] <- 0
+worth3 <- round(exp(2 * coefg3[1:6])/(sum(exp(2 *coefg3[1:6]))), digits = 5)
+print(worth3)
+
+
+## Worth Parameters Table (Table 11)
+matrixplot <- matrix(cbind(worth1, worth2, worth3), nrow=6, ncol=3) 
+stores<- c("GIFT10x1", "GIFT5x2","GIFT30x1", "GIFT15x2", "GIFT50x1", 
+           "GIFT25x2")
+dimnames(matrixplot)= list(stores, c("NO-Awareness", "NO-Reciprocity", "Reciprocity"))
+matrixplot
+
+# WORTH Parameters Plot (Plot 12)
+plot.wmat(matrixplot, ylab = "Worth Parameters", main = NULL, 
+          palette="Set1",
+          psymb = c(17, 15, 16, 18, 19, 20), ylim= c(0, 0.35))
+
+```

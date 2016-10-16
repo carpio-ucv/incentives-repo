@@ -1,0 +1,807 @@
+---
+title: "Exloratory and Inferential Analysis - Experiment 4"
+author: "Juan Carpio"
+output: html_document
+---
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, results='hide', warning=FALSE, message=FALSE}
+# Reading Clean File and setting relevant libraries.
+
+## Change working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("Hmisc")
+library("plyr")
+library("dplyr")
+library("tidyr")
+library("ggplot2")
+library("reshape2")
+library("leaps")
+library("car")
+library("ordinal", lib.loc="~/R/win-library/3.2")
+
+```
+
+## Preparing data frame for analysis
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+## read raw_data
+data_clean_imp<-read.csv("clean_data_Exp4.csv")
+## correcting ID veriable
+data_clean<- mutate(data_clean_imp, ID= X+1) %>% 
+        select(ID, everything(), -X)
+
+##Define factor variables
+
+data_clean$r_amount <- factor(data_clean$r_amount, levels = c(1,2),
+                      labels = c("£2", "£5")) 
+
+data_clean$r_type <- factor(data_clean$r_type, levels = c(1,2),
+                    labels = c("Cash", "Product")) 
+
+data_clean$gender <- factor(data_clean$gender, levels = c(1,2),
+                    labels = c("Male", "Female"))
+
+data_clean$income <- factor(data_clean$income, levels = c(1:5),
+                    labels = c("< 15k", "15k-19k",
+                               "20k-29k", "> 30k", "No.Ans")) 
+
+data_clean$employ <- factor(data_clean$employ, levels = c(1:6),
+                    labels = c("FT-Emp", "PT-Emp","Unempl.", 
+                               "Stud.", "Retired","Other")) 
+
+
+## Adding totals for Measures: Neg.Evaluations and Expectations 
+
+expect_1<-c("exp_x1_K","exp_x1_T", "exp_x1_S.R","exp_x1_G")
+expect_2<-c("exp_x2_K","exp_x2_T", "exp_x2_S.R","exp_x2_G")
+expect_all<-c("exp_x1_K","exp_x1_T", "exp_x1_S.R","exp_x1_G",
+              "exp_x2_K","exp_x2_T", "exp_x2_S.R","exp_x2_G")
+neg_eval<-c("neg.ev_1","neg.ev_2.R","neg.ev_3","neg.ev_4.R",
+            "neg.ev_5","neg.ev_6","neg.ev_7.R","neg.ev_8",
+            "neg.ev_9","neg.ev_10.R", "neg.ev_11","neg.ev_12")
+
+final_df<-data_clean %>% mutate(
+        tot_exp1 = rowMeans(.[expect_1]),
+        tot_exp2 = rowMeans(.[expect_2]),
+        exp_all = rowMeans(.[expect_all]),
+        tot_neg_eval = rowMeans(.[neg_eval])
+        )  
+
+#final_df %>% group_by(r_amount) %>% summarise(avg = mean(age))
+
+# Code to audit cases ###################
+# final_df %>% filter(ID==315) %>% gather()
+#########################################
+
+```
+
+
+## Chi Square Preferences First Choice (page 140)
+
+More than 80% prefered not to share the rward with anyone as a first choice. Such difference was highly significant. 
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, message=FALSE}
+
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all")) 
+
+chi_data<- filter(long_data, value==1)
+
+#Summarise first choice frequencies and proportions
+fr<-as.matrix(table(chi_data$variable))
+p <- c(fr[1,1]/nrow(chi_data), fr[2,1]/nrow(chi_data),
+                fr[3,1]/nrow(chi_data)) 
+
+#calculating chi square
+fr
+p
+chisq.test(fr)
+
+```
+
+
+# Scheme Ranking and Reward Amount (Section 3.3.2)
+
+## Reward Amount and Expectations Sharing with 1 FRIEND 
+
+### Mann Witney Test
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE, message=FALSE}
+
+
+low.exp_df<-final_df %>% filter(tot_exp1 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+high.exp_df<-final_df %>% filter(tot_exp1 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+
+u.low<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+u.low
+u.high<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+u.high
+
+```
+
+### FIGURE 16: Ranking, Reward Amount and Expectations Sharing with 1 FRIEND
+```{r}
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount", "exp_all"))
+
+dd<-data %>%  mutate(catg = ifelse(exp_all < 4.5, "Negative Expectations","Positive Expectations"))
+
+
+pct <- data %>% 
+  group_by(variable,r_amount,value) %>% 
+  summarise(n=n()) %>% 
+  group_by(variable) %>% 
+  mutate(perc=100*n/sum(n))
+
+pct$variable <- factor(pct$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+names(pct)[2]<-"Reward"
+
+## BY EXPECTATION CATEGORY SEPARATING EXPECTATIONS
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount", "tot_exp1", "tot_exp2"))
+
+exp_df<-data %>% mutate(cat.exp1 = ifelse(tot_exp1 < 4.5, 
+                "Low Expecations","High Expectations"),
+                        cat.exp2 = ifelse(tot_exp2 < 4.5, 
+                "Low Expectations","High Expectations"))
+exp_df$variable <- factor(exp_df$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+# Expectations sharing with one friend
+avg_rank1<-exp_df %>% group_by(variable,r_amount, cat.exp1) %>%
+        summarise(rank=mean(value))
+names(avg_rank1)[2]<-c("Amount")
+
+ggplot(avg_rank1, aes(x=Amount, y=rank, fill=Amount) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid( cat.exp1~ variable )+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Amount", y="Average Ranking")
+```
+
+## Reward Amount and Expectations Sharing with 2 FRIENDS  
+
+### Mann Witney Test 
+ 
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, message=FALSE}
+
+
+low.exp_df<-final_df %>% filter(tot_exp2 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+high.exp_df<-final_df %>% filter(tot_exp2 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_amount)
+
+
+u.low.2f<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+u.low.2f
+u.high.2f<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+u.high.2f
+```
+
+### FIGURE 17: Ranking, Reward Amount and Expectations Sharing with 2 FRIENDS
+```{r}
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount", "exp_all"))
+
+dd<-data %>%  mutate(catg = ifelse(exp_all < 4.5, "Negative Expectations","Positive Expectations"))
+
+
+pct <- data %>% 
+  group_by(variable,r_amount,value) %>% 
+  summarise(n=n()) %>% 
+  group_by(variable) %>% 
+  mutate(perc=100*n/sum(n))
+
+pct$variable <- factor(pct$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+names(pct)[2]<-"Reward"
+
+## BY EXPECTATION CATEGORY SEPARATING EXPECTATIONS
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount", "tot_exp1", "tot_exp2"))
+
+exp_df<-data %>% mutate(cat.exp1 = ifelse(tot_exp1 < 4.5, 
+                "Low Expecations","High Expectations"),
+                        cat.exp2 = ifelse(tot_exp2 < 4.5, 
+                "Low Expectations","High Expectations"))
+exp_df$variable <- factor(exp_df$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+# Expectations sharing with two friends
+avg_rank2<-exp_df %>% group_by(variable,r_amount, cat.exp2) %>%
+        summarise(rank=mean(value))
+names(avg_rank2)[2]<-c("Amount")
+
+ggplot(avg_rank2, aes(x=Amount, y=rank, fill=Amount) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid( cat.exp2~ variable )+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Amount", y="Average Ranking")
+```
+
+
+# Reward Amount and expectations about friends' reactions (Section 3.3.3) 
+
+### Mann Whitney test
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE, message=FALSE}
+
+#Median
+final_df %>% select(tot_exp1, tot_exp2, r_amount) %>%
+                group_by(r_amount) %>%
+                summarise(median(tot_exp1),median(tot_exp2), 
+                          mean(tot_exp1),mean(tot_exp2))
+
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(31:33)], 
+          function(x) wilcox.test(x ~ final_df[,29], var.equal= FALSE))
+u
+
+```
+
+### FIGURE 18: Plot Reward Amount and Expectations Friends Reactions
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE, message=FALSE}
+
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
+         id.var = c("r_type", "r_amount"))
+
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", 
+                          "2 Friends"))
+names(gdata)[2]<-"Reward"
+
+
+ggplot(gdata, aes(x=variable, y=value, fill=Reward))+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9,1))+
+        scale_fill_brewer(palette="Set1")+
+        labs(x="Number of friends with which the reward would be shared",
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+```
+
+# Scheme Ranking and Reward Framing (Section 3.3.4)
+
+Significant differences were found in terms of the type of reward (Cash or product) among the participants who preferred to share their reward (minority). 
+
+
+### Means and Mann Whitney Test
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+#Means
+final_df %>% select(vd_0f, vd_1f, vd_2f, r_type) %>%
+                group_by(r_type) %>%
+                summarise(mean(vd_0f),mean(vd_1f),mean(vd_2f))                  
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(2:4)], 
+          function(x) wilcox.test(x ~ final_df[,30], var.equal= FALSE))
+
+u
+```
+
+### FIGURE 19: Average ranking of each incentive scheme comparing the "Reward Framing".
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount", "tot_exp1", "tot_exp2"))
+
+avg_rank<-data %>% group_by(variable,r_type) %>%
+        summarise(rank=mean(value))
+
+avg_rank$variable <- factor(avg_rank$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_rank)[2]<-c("Framing")
+
+ggplot(avg_rank, aes(x=Framing, y=rank, fill=Framing) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Framing", y="Average Ranking")
+```
+
+
+## Reward Framing and Expectations Sharing with 1 FRIEND  
+
+### Mann Whitney Test
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE}
+
+low.exp_df<-final_df %>% filter(tot_exp1 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+high.exp_df<-final_df %>% filter(tot_exp1 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+
+u.low.1f<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+u.low.1f
+u.high.1f<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+u.high.1f
+```
+
+### FIGURE 20: Average ranking comparing the "Reward Framing", based on the expectations about sharing the reward with ONE friend.
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+exp_df<-data %>% mutate(cat.exp1 = ifelse(tot_exp1 < 4.5, 
+                "Low Expecations","High Expectations"),
+                        cat.exp2 = ifelse(tot_exp2 < 4.5, 
+                "Low Expectations","High Expectations"))
+exp_df$variable <- factor(exp_df$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+# Expectations sharing with one friend (FIGURE 20)
+avg_rank1<-exp_df %>% group_by(variable,r_type, cat.exp1) %>%
+        summarise(rank=mean(value))
+names(avg_rank1)[2]<-c("Framing")
+
+ggplot(avg_rank1, aes(x=Framing, y=rank, fill=Framing) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid( cat.exp1~ variable )+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Amount", y="Average Ranking")
+```
+
+
+## Reward Framing and Expectations Sharing with 2 FRIENDS
+
+### Mann Whitney Test
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE}
+
+
+low.exp_df<-final_df %>% filter(tot_exp2 <= 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+high.exp_df<-final_df %>% filter(tot_exp2 > 4.5) %>%
+        select(vd_0f, vd_1f, vd_2f, r_type)
+
+
+u.low.2f<-lapply(low.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~low.exp_df[,4],var.equal= TRUE))
+u.low.2f
+u.high.2f<-lapply(high.exp_df[,c(1:3)], 
+          function(x) wilcox.test(x ~high.exp_df[,4],var.equal= TRUE))
+u.high.2f
+```
+
+### FIGURE 21: Average ranking comparing the "Reward Framing", based on the expectations about sharing the reward with TWO friends.
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+exp_df<-data %>% mutate(cat.exp1 = ifelse(tot_exp1 < 4.5, 
+                "Low Expecations","High Expectations"),
+                        cat.exp2 = ifelse(tot_exp2 < 4.5, 
+                "Low Expectations","High Expectations"))
+exp_df$variable <- factor(exp_df$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+
+# Expectations sharing with two friends (FIGURE 21)
+avg_rank2<-exp_df %>% group_by(variable,r_type, cat.exp2) %>%
+        summarise(rank=mean(value))
+names(avg_rank2)[2]<-c("Framing")
+
+ggplot(avg_rank2, aes(x=Framing, y=rank, fill=Framing) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid( cat.exp2~ variable )+
+        scale_fill_brewer(palette="Set1")+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 0.5))+
+        theme_bw()+
+        labs(x="Reward Amount", y="Average Ranking")
+
+```
+
+
+# Reward Framing and expectations about friends'  (Section 3.3.5)
+
+### Mann Whitney Test and Median
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+#Median
+final_df %>% select(tot_exp1, tot_exp2, r_type) %>%
+                group_by(r_type) %>%
+                summarise(median(tot_exp1),median(tot_exp2), 
+                          mean(tot_exp1),mean(tot_exp2))
+
+# Mann Whitney U-Test
+u<-lapply(final_df[,c(31:33)], 
+          function(x) wilcox.test(x ~ final_df[,30], var.equal= FALSE))
+ps<-data.frame(p.value = sapply(u, getElement, name = "p.value"))
+format(ps, scientific = TRUE)
+
+```
+
+### FIGURE 22: Differences between "Reward Framing" in terms of expectations about sharing the reward with either one or two friends.
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2" ), 
+         id.var = c("r_type", "r_amount"))
+
+gdata$variable <- factor(gdata$variable,
+                labels = c("1 Friend", 
+                          "2 Friends"))
+names(gdata)[1]<-"Framing"
+
+
+ggplot(gdata, aes(x=variable, y=value, fill=Framing))+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9,1))+
+        scale_fill_brewer(palette="Set1")+
+        labs(x="Number of friends with which the reward would be shared",
+                y="Score-Expectations about friend's reaction")+
+        theme_bw()
+
+```
+
+# Interaction between Reward Framing and Reward Amount (Section 3.3.6)
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+gdata<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("r_type", "r_amount"))
+
+avg_rank<-gdata %>% group_by(variable,r_type, r_amount) %>%
+        summarise(rank=mean(value))
+
+avg_rank$variable <- factor(avg_rank$variable,
+                     labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_rank)[2]<-"Framing"
+names(avg_rank)[3]<-"Amount"
+
+#amount * Type
+
+ggplot(avg_rank, aes(x=Amount, y=rank, fill=Amount) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(variable ~ Framing)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        scale_y_continuous(limits =c(0,3), breaks=seq(0,3, 1))+
+        labs(x="Reward Framing", y="Average Ranking")
+
+```
+
+# Fears of negatives evaluations, AGE and GENDER (Section 3.3.7)
+Younger people and Females have a tendency to have higher fears of Negative Evaluations. 
+
+### Mann Whitney Test and Correlations
+```{r,echo=FALSE, eval=TRUE, include=TRUE, cache=TRUE}
+
+# Mann Whitney U-Test Reward Amount
+t.test(final_df[,34] ~ final_df[,29], var.equal= FALSE)
+# Mann Whitney U-Test Reward Type
+t.test(final_df[,34] ~ final_df[,30], var.equal= FALSE)
+# Mann Whitney U-Test Gender
+t.test(final_df[,34] ~ final_df[,25], var.equal= FALSE)
+
+#Correlation
+rcorr(final_df[,34], final_df[,27], type="pearson")  
+```
+
+### FIGURE 24: Relationship between age and the Fears of Negative Evaluations scale,
+
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+ggplot(final_df, aes(x=tot_neg_eval, y=age, color=gender)) +
+        geom_point(shape=16, size = I(5), alpha = I(0.5)) +
+        scale_color_manual(values=c('blue','red'))+
+        geom_smooth(method=lm,size=2, se=FALSE) +
+        labs(x="Scale - Fears of Negative Evaluations", y="Age")+
+        scale_y_continuous(limits =c(10,90), breaks=seq(10,90,10))+
+        theme_bw()
+
+```
+
+### Mediations Analysis FNE and Expectations about friends' reactions
+
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all", "gender",
+                   "income", "age", "employ")) 
+
+mr_data<- filter(long_data, value==1)
+mr_data[[3]]=as.factor(mr_data[[3]])
+
+mediation1<-lm(tot_neg_eval~tot_exp1, data = mr_data)
+mediation2<-lm(tot_neg_eval~tot_exp2, data = mr_data)
+summary (mediation1)
+summary (mediation2)
+```
+
+
+# Expectations about Friends' Reaction in general (Section 3.3.8)
+
+### Mann Whitney Test and Means
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+gdata<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2"), 
+         id.var = c("gender"))
+
+#Median and Mean per number of friends
+gdata %>% group_by(variable) %>%
+        summarise(median(value),mean(value))
+
+#Median and Mean per Gender
+gdata %>% group_by(gender) %>%
+        summarise(median(value),mean(value))
+
+# Mann Whitney between number of friends
+wilcox.test(gdata[,3] ~ gdata[,2], var.equal= FALSE)
+
+# Mann Whitney between GENDER
+
+lapply(final_df[,c(31:32)], 
+          function(x) wilcox.test(x ~ final_df[,25], var.equal= FALSE))
+
+
+```
+
+### FIGURE 25: Differences between "Genders" in terms of expectations about sharing the reward with either one or two friends.
+
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+gdata$variable <- factor(gdata$variable, 
+                     labels = c("Exp. Sharing with 1 Friend", 
+                                "Exp. Sharing with 2 Friends"))
+names(gdata)[1]<-"Gender"
+
+ggplot(gdata, aes(x=Gender, y=value, fill=Gender) )+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        facet_grid(. ~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        coord_cartesian(ylim=c(0, 8.5))+
+        scale_y_continuous(limits =c(0,9), breaks=seq(0,9, 1))+
+        labs(x="Gender", 
+             y="Score-Expectations about friends' reactions")
+
+```
+
+# Income and schemes' preferences (Section 3.3.9)
+
+### Mann Whitney Test
+```{r, echo=FALSE, eval=TRUE, include=TRUE, cache=FALSE}
+
+# Mann Whitney between income categories
+
+lapply(final_df[,c(2:4)], 
+          function(x) kruskal.test(x~ final_df[,26]))
+
+```
+
+### FIGURE 26: Income categories and schemes' average rankings.
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("income"))
+
+avg_rank<-data %>% group_by(variable,income) %>%
+        summarise(rank=mean(value))
+
+avg_rank$variable <- factor(avg_rank$variable,
+                     labels = c("NO Friend", "1 Friend", "2 Friends"))
+names(avg_rank)[2]<-"Income"
+
+ggplot(avg_rank, aes(x=Income, y=rank, fill=Income) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+
+        labs(x="Income Category", y="Average Ranking")
+```
+
+### FIGURE 27: Income categories and expectations about friends' reactions.
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("tot_exp1", "tot_exp2"), 
+         id.var = c("income"))
+
+
+data$variable <- factor(data$variable,
+                     labels = c("Exp. Sharing with 1 Friend", 
+                                "Exp. Sharing with 2 Friends"))
+names(avg_rank)[2]<-"Income"
+
+ggplot(data, aes(x=income, y=value, fill=income) )+
+        geom_bar(stat = "summary", fun.y = "mean",position="dodge")+
+        facet_grid(~ variable)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))+
+        #scale_y_continuous(limits =c(0,6), breaks=seq(0,6, 1))+
+        labs(x="Income Category", y="Expectations about friends' reactions")
+
+```
+
+### Correlations
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+data<- final_df %>% select(vd_0f,vd_1f,vd_2f,tot_exp1,tot_exp2,income)                 %>% filter(income!="No.Ans") %>% 
+                melt(measure.var= c("vd_0f","vd_1f","vd_2f"), 
+                id.var = c("income","tot_exp1","tot_exp2")) %>%
+                filter(value==1) %>%
+                melt(measure.var= c("tot_exp1","tot_exp2"), 
+                id.var = c("income", "variable")) 
+
+names(data) <- c("income", "scheme", "exp.cat", "exp.value")
+data$income <- as.numeric(data$income)
+
+# Calculate correlation for each group
+
+## Corralatuions value
+ddply(data, c("exp.cat","scheme"), summarise, cor = round(cor(income, exp.value, method="spearman"), 4))
+
+## p  value
+ddply(data, c("exp.cat","scheme"), summarise, p = round(cor.test(income, exp.value, method="spearman")$p.value,4))
+
+```
+
+# ADDITIONAL ANALYSIS 
+
+## ALPHA FNE and Expectations scales.
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, message=FALSE}
+
+library("psych")
+
+## Expectations about friends reactons
+f1<-final_df %>% select(exp_x1_K, exp_x1_T, exp_x1_S.R, exp_x1_G) 
+alpha(as.data.frame(f1))
+
+f2<-final_df %>% select(exp_x2_K, exp_x2_T, exp_x2_S.R, exp_x2_G) 
+alpha(as.data.frame(f2))
+
+## Fears of Negative evaluations scale.
+fne<- final_df %>% 
+                select(neg.ev_1,neg.ev_2.R,neg.ev_3,
+                neg.ev_4.R,neg.ev_5,neg.ev_6,neg.ev_7.R,
+                neg.ev_8,neg.ev_9,neg.ev_10.R,neg.ev_11, neg.ev_12)
+alpha(as.data.frame(fne))
+```
+
+## Explorations not included in Thesis
+
+### Correlations Matrix
+
+***
+The strongest and most relevant correlations were between:
+
+* Expect.Reaction_1 Friend -- Gender (-)
+* Expect.Reaction_2 Friends -- Gender (-)
+* Expect.Reaction_2 Friends -- Choice not sharing with Friends (-)
+* Expect.Reaction_2 Friends -- Choice sharing with 2 Friends (+)
+* Expect.Reaction_tOTAL -- Choice not sharing with Friends (-)
+* Fear Neg. Evaluation -- Gender (+)
+* Fear Neg. Evaluation -- Age (-)
+***
+
+
+####- Pearson
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+rxy<- select(final_df, tot_exp1,tot_exp2,exp_all, tot_neg_eval, 
+           vd_0f, vd_2f, vd_1f, gender, income, age, employ)
+
+rxy[1:ncol(rxy)] <- lapply(rxy[1:ncol(rxy)], function(x) as.numeric(x))
+
+rxy<-as.matrix(rxy) 
+rcorr(rxy, type="pearson")                           
+```
+####- Spearman
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+rxy<- select(final_df, tot_exp1,tot_exp2,exp_all,tot_neg_eval, 
+            vd_0f, vd_2f, vd_1f, gender, income, age, employ)
+
+rxy[1:ncol(rxy)] <- lapply(rxy[1:ncol(rxy)], function(x) as.numeric(x))
+
+rxy<-as.matrix(rxy)   
+rcorr(rxy, type="spearman")                           
+```
+
+### Employment / Scheme preferences
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("employ"))
+
+fr1 <- data %>% 
+        group_by(variable,employ,value) %>% 
+        summarise(n=n()) 
+fr2 <- fr1 %>% 
+        group_by(employ, variable) %>% 
+        summarise(n=sum(n))
+pct <- left_join(fr1, fr2, by = c("employ"="employ", 
+                                  "variable"="variable")) %>%
+        mutate(perc=100*n.x/(n.y)) 
+
+
+pct$variable <- factor(pct$variable,
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+pct$value <- factor(pct$value)
+
+names(pct)[2]<-"employ"
+
+ggplot(pct, aes(x=value, y=perc, fill=variable) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ employ)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+```
+
+
+### Income / Scheme preferences
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("income"))
+
+
+fr1 <- data %>% 
+        group_by(variable,income,value) %>% 
+        summarise(n=n()) 
+fr2 <- fr1 %>% 
+        group_by(income, variable) %>% 
+        summarise(n=sum(n))
+pct <- left_join(fr1, fr2, by = c("income"="income", 
+                                  "variable"="variable")) %>%
+        mutate(perc=100*n.x/(n.y)) 
+
+pct$variable <- factor(pct$variable, 
+                labels = c("NO Friend", "1 Friend", "2 Friends"))
+pct$value <- factor(pct$value) 
+
+names(pct)[2]<-"income"
+
+ggplot(pct, aes(x=value, y=perc, fill=variable) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ income)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+```
+
+### Income / Scheme preferences (AVERAGE RANKING)
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE}
+
+data<-melt(final_df, measure.var= c("vd_0f","vd_1f", "vd_2f"), 
+         id.var = c("income"))
+
+avg_rank<-data %>% group_by(variable,income) %>%
+        summarise(rank=mean(value))
+
+
+ggplot(avg_rank, aes(x=variable, y=rank, fill=variable) )+
+        geom_bar(stat="identity",position="dodge")+
+        facet_grid(~ income)+
+        scale_fill_brewer(palette="Set1")+
+        theme_bw()+
+        labs(x="Schemes Rankings", y="Percentage from the total of each alternative")
+
+```
+
+

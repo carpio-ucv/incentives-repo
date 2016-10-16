@@ -1,0 +1,113 @@
+---
+title: "Core analysis Experiment 2"
+author: "Juan Carpio"
+output: html_document
+---
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+
+## Set working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("dplyr")
+library("reshape2")
+library("tidyr")
+library("ggplot2")
+library("descr")
+library("scales", lib.loc="~/R/win-library/3.2")
+
+## read raw_data
+data_clean<-read.csv("clean_data_exp2.csv")
+
+```
+
+## Preparing data frame for analysis
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+##Factors definition
+data_clean$condition <- factor(data_clean$condition, levels = c(1:3),
+                      labels = c("No-Reciprocity","Reciprocity",
+                                 "No-Awareness"))
+data_clean$gender <- factor(data_clean$gender, levels = c(2,1),
+                      labels = c("Female","Male"))
+
+
+## Summary of scheme selection in Stage 1, from Experiment 2
+p100<-rowSums(data_clean[,6:18] == 5)
+p75<-rowSums(data_clean[,6:18] == 2)
+p50<-rowSums(data_clean[,6:18] == 1)
+p25<-rowSums(data_clean[,6:18] == 3)
+p0<-rowSums(data_clean[,6:18] == 4)
+
+df_st1<- data_clean %>% select(condition) %>%
+        mutate(p0=p0,p25=p25,p50=p50,p75=p75,p100=p100) %>%
+        melt(id.vars="condition", value.name="Fr",
+             variable.name="Scheme")
+head(df_st1)
+
+## Summary of scheme selection in Stage 2, from Experiment 2
+cert.both<-rowSums(data_clean[,6:18] == 6)
+Unct.part<-rowSums(data_clean[,6:18] == 7)
+unct.both<-rowSums(data_clean[,6:18] == 8)
+
+df_st2<- data_clean %>% select(condition) %>%
+        mutate(cert.both=cert.both,Unct.part=Unct.part,
+               unct.both=unct.both) %>%
+        melt(id.vars="condition", value.name="Fr",
+             variable.name="Scheme")
+head(df_st2)
+
+```
+
+
+## Plot comparing conditions- Statge 1 (Figure 6)
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+## Summarise choice frequency per scheme
+sch<-df_st1 %>% group_by(condition,Scheme) %>% summarise(Fr=sum(Fr))
+## Subtotals per category        
+ncat<- sch %>% group_by(condition) %>% summarise(ncat=sum(Fr))
+## Final gata frame for plot
+data.plot1<-left_join(sch, ncat, by="condition")
+head(data.plot1)
+## Legend in uppercase
+names(data.plot1)[1]<-"Condition"
+
+##PLot
+ggplot(data.plot1, aes(Scheme, y=Fr/ncat,fill=Condition))+
+        geom_bar(stat = "identity",position="dodge")+
+        scale_y_continuous(limits =c(0,.35), breaks=seq(0,.35,.05),
+                           labels = percent)+
+        scale_x_discrete(labels = c("0%", "25%", "50%","75%","100%"))+
+        scale_fill_brewer(palette="Set1") +
+        labs(x="Proportion of the reward being shared with others",
+        y="Proportion of selection") +
+        theme_bw()
+```
+
+## Plot comparing conditions- Statge 2 (Figure 8)
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+## Summarise choice frequency per scheme
+sch2<-df_st2 %>% group_by(condition,Scheme) %>% summarise(Fr=sum(Fr))
+## Subtotals per category        
+ncat2<- sch2 %>% group_by(condition) %>% summarise(ncat=sum(Fr))
+## Final gata frame for plot
+data.plot2<-left_join(sch2, ncat2, by="condition")
+head(data.plot2)
+# Legend in uppercase
+names(data.plot2)[1]<-"Condition"
+
+#PLot
+ggplot(data.plot2, aes(Scheme, y=Fr/ncat,fill=Condition))+
+        geom_bar(stat = "identity",position="dodge")+
+        scale_y_continuous(limits =c(0,.5), breaks=seq(0,.5,.05),
+                           labels = percent)+
+        scale_x_discrete(labels = c("Certainty Both", "Uncertainty Partner","Uncertainty Both"))+
+        scale_fill_brewer(palette="Set1") +
+        labs(x="Proportion of the reward being shared with others",
+        y="Proportion of selection") +
+        theme_bw()
+```

@@ -1,0 +1,178 @@
+---
+title: "Choices Modelling - Experiment 2"
+author: "Juan Carpio"
+output: html_document
+---
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+
+## Set working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("prefmod", lib.loc="~/R/win-library/3.2")
+library("dplyr")
+library("reshape2")
+library("tidyr")
+library("ggplot2")
+
+```
+
+# Stage 1, Experiment 2
+
+
+## Preparing Data Frame
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+exp <- read.csv("Exp2_stage1.csv")
+
+# Setting the dataset layout required by the "prefmod" library
+exp2 <- llbt.design(exp, nitems = 5, cat.scovs = "cond")
+gr <- factor(exp2$cond)
+#Variable names
+names(exp2)[5:9] <- c("GIFT50", "GIFT75", "GIFT25", "GIFT0", "GIFT100")
+
+```
+
+## Choices Modelling
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+## General Model (GNM)
+res <- gnm(formula = y ~ GIFT100 + GIFT75 + GIFT50 + GIFT25 + GIFT0
+           , eliminate = mu:cond, family = poisson, data = exp2)
+summary(res)
+
+1-pchisq(res$deviance, df= res$df)
+
+## Model Including Groups Interaction
+resgr <- gnm(formula = y ~ GIFT100 + GIFT75 + GIFT50 + GIFT25 + GIFT0 +
+               (GIFT100 + GIFT75 + GIFT50 + GIFT25 + GIFT0):cond, 
+             eliminate = mu:cond, family = poisson, data = exp2)
+
+summary(resgr) # Table 3 - final model
+
+1-pchisq(resgr$deviance, df= resgr$df)
+
+# Models Comparison (ANOVA - Table 2)
+anova(res,resgr, test = "Chisq")
+
+
+## Coefficients
+
+### No Reciprocity Condition
+coefg2 <- resgr$coefficients [1:5] + resgr$coefficients [c(6,8,10,12,14)]
+coefg2
+### Reciprocity Condition
+coefg3 <- resgr$coefficients [1:5] + resgr$coefficients [c(7,9,11,13,15)]
+coefg3
+
+```
+
+## Worth Parameters
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE}
+
+## Worth 1 (CONTROL NO AWARENESS)
+resgr$coefficients[c(5)] <- 0
+worth1 <- round(exp(2 * resgr$coefficients[1:5])/(sum(exp(2 *
+                resgr$coefficients[1:5]))), digits = 5)
+print(worth1)
+
+## Worth 2 (NO RECIPROCITY)
+coefg2[c(5)] <- 0
+worth2 <- round(exp(2 * coefg2[1:5])/(sum(exp(2 * coefg2[1:5]))), digits = 5)
+print(worth2)
+
+## Worth 3 (RECIPROCITY)
+coefg3[c(5)] <- 0
+worth3 <- round(exp(2 * coefg3[1:5])/(sum(exp(2 *coefg3[1:5]))), digits = 5)
+print(worth3)
+
+## Worth Parameters Table (Table 4)
+matrixplot <- matrix(cbind(worth1, worth2, worth3), nrow=5, ncol=3) 
+stores<- c("Give-100%", "Give-75%", "Give-50%","Give-25%", "Give-0%")
+dimnames(matrixplot)= list(stores, c("No Awareness", "NO-Reciprocity", "Reciprocity"))
+matrixplot
+
+# WORTH Parameters Plot- Figure 7
+plot.wmat(matrixplot, ylab = "Worth Parameters", main = NULL, 
+          psymb = c(16, 15, 17, 18, 19), ylim= c(0, 0.45))
+
+```
+
+# Stage 2, Experiment 2
+
+## Preparing Data Frame
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE, results='hide'}
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+stg2 <- read.csv("bltexp2B.csv")
+
+exp2b <- llbt.design(stg2, nitems = 3, cov.sel = "cond")
+gr <- factor(exp2b$cond)
+names(exp2b)[5:7] <- c("Certainty_Both", "Uncertainty_Partner", 
+                       "Uncertainty_Both")
+```
+
+
+## Choices Modelling
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, warning=FALSE}
+
+## General Model (GNM) - Table 7
+res2 <- gnm(formula = y ~ Uncertainty_Partner + Uncertainty_Both + 
+            Certainty_Both , family = poisson, 
+            eliminate =mu:gr, data = exp2b)
+summary(res2)
+
+1-pchisq(res2$deviance, df= res2$df)
+
+## Model Including Groups Interaction
+resgr2 <- gnm(formula = y ~ Uncertainty_Partner + Uncertainty_Both + 
+                Certainty_Both+(Uncertainty_Partner + 
+                Uncertainty_Both + Certainty_Both):gr,
+                eliminate = mu:gr, family = poisson, data = exp2b)
+summary(resgr2)
+
+1-pchisq(resgr2$deviance, df= resgr2$df) 
+
+
+# Models Comparison (ANOVA - Table 6)
+anova(res2,resgr2, test = "Chisq")
+
+
+## Coefficients
+
+### No Reciprocity Condition
+coef2g2 <- resgr2$coefficients [1:3] + resgr2$coefficients [c(4,6,8)]
+coef2g2
+### Reciprocity Condition
+coef2g3 <- resgr2$coefficients [1:3] + resgr2$coefficients [c(5,7,9)]
+coef2g3
+
+```
+
+## Worth Parameters
+
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=TRUE, warning=FALSE}
+
+## WORTH parameters 
+res2$coefficients[c(3)] <- 0
+worth1 <- round(exp(2 * res2$coefficients[1:3])/(sum(exp(2 *
+                        res2$coefficients[1:3]))), digits = 5)
+print(worth1)
+
+
+## Worth Parameters Table 
+matrixplot <- matrix(worth1, nrow=3, ncol=1) 
+stores<- c("Uncertainty_Partner", 
+           "Uncertainty_Both", "Certainty_Both")
+dimnames(matrixplot)= list(stores, c("Loyalty Programmes"))
+
+# WORTH Parameters Plot
+plot.wmat(matrixplot, ylab = "Worth Parameters", main = NULL, 
+          psymb = c(16, 17, 15), ylim= c(0, 0.6))
+
+```

@@ -1,3 +1,4 @@
+
 ---
 title: "Incentives Exploratory Analysis"
 author: "Juan Carpio"
@@ -9,7 +10,7 @@ output: html_document
 # Reading Clean File and setting relevant libraries.
 
 ## Change working directory
-setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives")
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
 
 ##Relevant libraries
 
@@ -22,7 +23,7 @@ library("leaps")
 
 
 ## read raw_data
-data_clean_imp<-read.csv("clean_data.csv")
+data_clean_imp<-read.csv("clean_data_Exp4.csv")
 ## correcting ID veriable
 data_clean<- mutate(data_clean_imp, ID= X+1) %>% 
         select(ID, everything(), -X)

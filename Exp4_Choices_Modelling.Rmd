@@ -1,0 +1,335 @@
+---
+title: "Choices Modelling Experiment 4"
+author: "Juan Carpio"
+output: html_document
+---
+
+## Setting directory and relevant library
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE, warning=FALSE}
+
+# Reading Clean File and setting relevant libraries.
+
+## Change working directory
+setwd("C:/Users/K56CA/Dropbox/PhD/Experiments Incentives/Follow_Up_Incentives/incentives-repo")
+
+##Relevant libraries
+library("nnet")# Multinomial regression
+library("Hmisc")
+library("dplyr")
+library("tidyr")
+library("ggplot2")
+library("reshape2")
+library("leaps")
+library("car")
+library("ordinal", lib.loc="~/R/win-library/3.2")
+
+## read raw_data
+data_clean_imp<-read.csv("clean_data_Exp4.csv")
+## correcting ID veriable
+data_clean<- mutate(data_clean_imp, ID= X+1) %>% 
+        select(ID, everything(), -X)
+
+```
+
+## Preparing Data Frame
+```{r,echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE}
+
+##Define factor variables
+
+data_clean$r_amount <- factor(data_clean$r_amount, levels = c(1,2),
+                      labels = c("£2", "£5")) 
+
+data_clean$r_type <- factor(data_clean$r_type, levels = c(1,2),
+                    labels = c("Cash", "Product")) 
+
+data_clean$gender <- factor(data_clean$gender, levels = c(1,2),
+                    labels = c("Male", "Female"))
+
+data_clean$income <- factor(data_clean$income, levels = c(1:5),
+                    labels = c("< 15k", "15k-19k",
+                               "20k-29k", "> 30k", "No.Ans")) 
+
+data_clean$employ <- factor(data_clean$employ, levels = c(1:6),
+                    labels = c("FT-Emp", "PT-Emp","Unempl.", 
+                               "Stud.", "Retired","Other")) 
+
+## Adding totals for Measures: Neg.Evaluations and Expectations 
+
+expect_1<-c("exp_x1_K","exp_x1_T", "exp_x1_S.R","exp_x1_G")
+expect_2<-c("exp_x2_K","exp_x2_T", "exp_x2_S.R","exp_x2_G")
+expect_all<-c("exp_x1_K","exp_x1_T", "exp_x1_S.R","exp_x1_G",
+              "exp_x2_K","exp_x2_T", "exp_x2_S.R","exp_x2_G")
+neg_eval<-c("neg.ev_1","neg.ev_2.R","neg.ev_3","neg.ev_4.R",
+            "neg.ev_5","neg.ev_6","neg.ev_7.R","neg.ev_8",
+            "neg.ev_9","neg.ev_10.R", "neg.ev_11","neg.ev_12")
+
+final_df<-data_clean %>% mutate(
+        tot_exp1 = rowMeans(.[expect_1]),
+        tot_exp2 = rowMeans(.[expect_2]),
+        exp_all = rowMeans(.[expect_all]),
+        tot_neg_eval = rowMeans(.[neg_eval])
+        )  
+
+#final_df %>% group_by(r_amount) %>% summarise(avg = mean(age))
+
+# Code to audit cases ###################
+# final_df %>% filter(ID==315) %>% gather()
+#########################################
+
+```
+
+
+
+## Function to estimate the model
+
+Takes a given multinomial model an return a table with all relevant values, including Likelihood Ratio test. 
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, results='hide'}
+
+mod_frame <- function(m){
+        
+        mod<-summary(m)
+        n<-length(mod$coefficients[1,])*2
+   #Estimate Table values        
+        coef<-matrix(cbind(mod$coefficients[1,],
+                   mod$coefficients[2,]),n ,1)
+        se<-matrix(cbind(mod$standard.errors[1,],
+                 mod$standard.errors[2,]), n,1)
+        z <-matrix(cbind(mod$coefficients[1,]/mod$standard.errors[1,],
+                         mod$coefficients[2,]/mod$standard.errors[2,]))
+        p <-((1 - pnorm(abs(z), 0, 1))*2)
+        
+        odds<- exp(coef)
+       
+        r.deviance<-mod$deviance
+        AIC<-mod$AIC
+        
+        coef.name<-matrix(rep(mod$vcoefnames,2),n,1)
+        cond<- matrix(cbind(rep(c("1_Friend"),n/2),
+                        rep(c("2_Friends"),n/2)),n,1)
+   #Build table        
+                df<- as.data.frame(cbind(cond, coef.name)) %>% 
+                cbind(round(cbind(coef,se,z,p,odds),3))
+                colnames(df)<-c("Condition","Variable","Coeff",
+                        "Sd.Error","z.value", "p.value", "odds")
+                print(mod$call)
+                print(df)
+
+   #Model goodness of fitness
+                fit<-(cbind(r.deviance,AIC))
+                colnames(fit)<-c("Residual Deviance","AIC")
+                print(fit)
+   #Likelihood Ratio Test
+                print(Anova(m))
+}
+
+```
+
+
+# First Choice preferences Modelling 
+
+
+### Exclude all terms whose elimination did not result in a significant reduction of the model fitness (Page 142-144)
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE, warning=FALSE}
+
+# Preparing data
+long_data<-melt(final_df, measure.var= c("vd_0f","vd_1f","vd_2f"),
+        id.var = c("ID","r_type", "r_amount", "tot_neg_eval",
+                   "tot_exp1","tot_exp2", "exp_all", "gender",
+                   "income", "age", "employ")) 
+
+mr_data<- filter(long_data, value==1)
+mr_data[[3]]=as.factor(mr_data[[3]])
+
+
+mod1<- multinom(variable ~ r_type + exp_all + income + 
+                employ + r_amount + gender + tot_neg_eval
+                ,data = mr_data)
+mod2<-update(mod1, . ~ . - tot_neg_eval)
+mod3<-update(mod2, . ~ . - gender)
+mod4<-update(mod3, . ~ . - r_amount)
+mod5<-update(mod4, . ~ . - employ)
+
+#Additional models
+mod6<-update(mod4, . ~ . - income)
+mod7<-update(mod4, . ~ . - exp_all)
+
+# "mod5 (Model 2 in Thesis) is the one retained, and contains the variables: Reward Framing, Expectations about Friend's Reactions, and Income.
+mod_frame(mod5)
+
+```
+
+
+## Type II Test (Page 143-144)
+### Calculate the LR by comparing a model that excluded each individual factor with a model that included all the other possible covariates
+
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE, warning=FALSE}
+
+                                                     ## p value L.R. ##
+mod1x<- multinom(variable ~ r_type, data = mr_data)      #  0.0126  *
+mod2x<- multinom(variable ~ exp_all, data = mr_data)     #  0.1136  *
+mod3x<- multinom(variable ~ income, data = mr_data)      #  0.03547 *
+mod4x<- multinom(variable ~ employ, data = mr_data)      #  0.3815 
+mod5x<- multinom(variable ~ r_amount, data = mr_data)    #  0.6254  
+mod6x<- multinom(variable ~ gender, data = mr_data)      #  0.6475
+mod7x<- multinom(variable ~ tot_neg_eval, data = mr_data)#  0.727 
+
+# The variables: Reward Framing, Expectations about Friend's Reactions, and Income has the Lowest p values. 
+
+```
+
+
+## Selecting Final Model 
+### Selection of final predictors by comparing the goodness of fitness of several models (Table 15)
+
+```{r, echo=TRUE, eval=TRUE, include=TRUE, cache=FALSE, message=FALSE, warning=FALSE}
+
+                                                  ##Res.Dev.   AIC
+m1<- update(mod5, .~. + r_amount)  #Model 3       #406.0627 438.0627
+m2<- update(mod5, .~. + tot_neg_eval) #Model 4    #407.5776 439.5776
+m3<- update(mod5, .~. + gender) #Model 5          #407.0715 439.0715
+m4<- update(mod5, .~. + age)  #Model 6            #407.1102 439.1102
+m5<- update(mod5, .~. + employ) #Model 7          #397.2083 445.2083
+m6<- update(mod5, .~. + r_amount*exp_all)#Model 8 #393.9693 429.9693
+m7<- update(mod5, .~. + r_amount + r_amount*exp_all) # ""      ""
+
+#Model 11
+m8<- update(mod5, .~. + r_amount*exp_all-income)  #409.1858 429.1858 
+#Model 9
+m9<- update(m6, .~. + r_amount*r_type)            #393.2482 433.2482
+#Model 10
+m12<- update(m6, .~.  + exp_all*r_type)           #390.9565 430.9565
+
+#Models not considered in the Thesis
+m10<- update(m6, .~. + r_amount*r_type -r_amount) #401.7075 437.7075
+m11<- update(mod5, .~.  + r_amount*exp_all - r_amount)
+                                                  #404.4128 436.4128
+
+#############
+#FINAL MODEL#
+#############
+
+#We selected m6 (Model 8) as our Final Model.- Table 16
+mod_frame(m6)
+
+```
+
+
+# Probability Plots
+
+##fitted model keeping "Income" constant, and comparing the "Reward amount" within each group (FIGURE 13 AND FIGURE 14)
+```{r}
+
+v.r_type<-c("Cash", "Product")
+v.exp_all<-c(1:9)
+v.r_amount<-c("£2", "£5")
+v.income<- factor(1, levels = c(1),labels = c("< 15k"))
+
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
+colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
+
+
+## store the predicted probabilities for each value of ses and write
+pp.exp <- cbind(dexp, predict(m6, newdata = dexp, 
+                               type = "probs", se = TRUE))
+
+## calculate the mean probabilities within each level of ses
+by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
+
+## melt data set to long for ggplot2
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type",
+                "income", "r_amount"), value.name = "probability")
+
+head(lpp) # view first few rows
+
+## plot predicted probabilities across write values for
+## each level of ses facetted by program type
+
+lpp2 <- lpp
+#Change schems labels
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+#Change income label
+levels(lpp2$income)[levels(lpp2$income)=="< 15k"]<- "Income= < 15k"
+
+#Change reward amount label
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
+
+head(lpp2, 3)
+
+ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_type)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_amount*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Framing") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+
+ggplot(lpp2, aes(x = exp_all, y = probability, colour = r_amount)) +
+        geom_line(size=1) +
+        facet_grid(variable ~ r_type*income, scales="free")+
+        scale_color_manual(values=c("blue","red"),
+                name="Reward Amount") +
+        scale_x_continuous(limits =c(1,9), breaks=seq(1,9,1))+
+        labs(x="Expectations about friends reactions", 
+                y="Choice probability")
+
+ 
+```
+
+
+## Estimated probabilities of the fitted model keeping                  "Expectations about Friends" constant. (FIGURE 15)
+
+```{r}
+
+v.r_type<-c("Cash", "Product")
+v.exp_all<-c(7) #average value
+v.r_amount<-c("£2", "£5")
+v.income<- c("< 15k", "15k-19k","20k-29k", "> 30k", "No.Ans")
+
+dexp<-expand.grid(v.r_type, v.exp_all, v.r_amount, v.income)
+colnames(dexp)<-c("r_type", "exp_all", "r_amount", "income")
+
+
+## store the predicted probabilities for each value of ses and write
+pp.exp <- cbind(dexp, predict(m7, newdata = dexp, 
+                               type = "probs", se = TRUE))
+
+## calculate the mean probabilities within each level of ses
+by(pp.exp[, 5:7], pp.exp$r_type, colMeans)
+
+## melt data set to long for ggplot2
+lpp <- melt(pp.exp, id.vars = c("exp_all", "r_type",
+                "income", "r_amount"), value.name = "probability")
+
+head(lpp) # view first few rows
+
+## plot predicted probabilities across write values for
+## each level of ses facetted by program type
+
+lpp2 <- lpp
+#Change schems labels
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_0f"]<- "No Friends"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_1f"]<- "1 Friend"
+levels(lpp2$variable)[levels(lpp2$variable)=="vd_2f"]<- "2 Friend2"
+
+#Change reward amount label
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£2"]<- "Reward= £2"
+levels(lpp2$r_amount)[levels(lpp2$r_amount)=="£5"]<- "Reward= £5"
+
+head(lpp2, 3)
+
+
+ggplot(lpp2, aes(x = income, y = probability,
+                colour = r_type, group=r_type)) +
+                geom_line()+
+                geom_point() + 
+                facet_grid(variable ~ r_amount, scales="free")+
+                        scale_color_manual(values=c("blue","red"),
+                        name="Reward Type") +
+                theme(axis.text.x= element_text(angle = 90, hjust= 1))+
+                labs(x="Income Category", y="Choice probability")
+ 
+```
